@@ -1,0 +1,311 @@
+
+
+PERMISSIONS = {
+    "administration" : {
+        "requete" : {
+            "delete_request": "Supprimer une rêquete",
+            "all_requests" : "Voir toutes les rêquetes",
+            "nbr_requests" : "Voir le nombre de rêquetes",
+            "validate_request" : "Valider une rêquete",
+            "get_requests_by_id" : "Voir les rêquetes d'un utilisateur",
+            "rejet_request" : "Rejeter une rêquete",
+        },
+        "roles" : {
+            "add_rôle" : "Ajouter un Rôle",
+            "all_roles" : "Voir tous les Rôles",
+            "delete_role" : "Supprimer un Rôles",
+            "edit_role" : "Editer | modifier un role",
+        },
+        "user_activity" : {
+            "all_user_activity" : "Voir toutes les activités de tous les utilisateurs,",
+            "view_user_activity" : "Voir l'activité d'un utilisateur",
+            "delete_all_user_activity" : "Supprimer toutes les activités des utilisateurs",
+        },
+        "user_management" : {
+            "view_nbr_user" : "Voir le Nombre d'Utilisateurs",
+            "all_user" : "Tous les utilisateurs",
+            "delete_user" : "Supprimer un utilisateur",
+            "delete_all_user" : "Supprimer l'ensemble des utilisateurs",
+            "mod_user" : "Modifier un utilisateurs",
+            "view_user" : "Voir un utilisateur",
+        },
+        "blog" : {
+            "add_article" : "Ajouter un Article",
+            "delete_article" : "Supprimer un article",
+            "modify_article" : "Modifier un article",
+            "all_article" : "Tous les articles",
+            "get_article" : "Voir un article en particulier",
+            "retrieve_image" : "Récupérer l'image d'un blog",
+        },
+        "configuration": {
+            "add_config" : "Ajouter une configuration",
+            "mod_config" : "Modifier une Configuration",
+            "get_config" : "Voir une configuration en particulier",
+            "delete_config" : "Supprimer une Configuration en particulier",
+        },
+        "doctors_charge_doctors" : {
+            "charge_doctors" : "Charger tous les docteurs de GNUHealth",
+            "charge_one_doctors" : "Charger un docteur en particuliers",
+            "all_doctors" : "Tous les docteurs",
+            "delete_doctor" : "Supprimer un docteur",
+            "nbr_doctor" : "Nombre de Docteur",
+            "confirm_doctor" : "Confirmer des docteurs",
+            "update_doctor" : "Mettre à Jour un docteur",
+            "get_info_doctor" : "Voir les informations d'un docteur",
+            "getDocInfosByMatricule" : "Voir les informations d'un docteur avec son matricule"
+        },
+        "notifications_etiquettes" : {
+            "add_notification_etiquette" : "Ajouter une nouvelle étiquette de notification",
+            "all_etiquettes_notifications" : "Voir toutes les étiquettes de notifications",
+            "delete_etiquette_notification" : "Supprimer une étiquette de notification",
+            "modify_etiquette_notification" : "Modifier une étiquette de notification",
+        },
+        "notifications_general" : {
+            "add_notification" : "Ajouter une nouvelle notification",
+            "all_notifications" : "Voir toutes les notifications",
+            "delete_notification" : "Supprimer une notification",
+            "modify_notification" : "Modifier une notification",
+            "mark_notification_as_read" : "Marquer une notification comme lue",
+            "user_notifications" : "Voir les notifications d'un utilisateur",
+            "all_user_notifications" : "Voir les notifications de tous les utilisateurs - Les notifications qui ont été classé comme pour tous les utilisateurs",
+            "send_email_notification" : "Envoyer une notification par email à tous les utilisateurs",
+            "notification_by_type" : "Notifications par type",
+            "notification_by_etiquette" : "Notifications par étiquette",
+        },
+        "notifications_types" : {
+            "add_notification_type" : "Ajouter un nouveau type de notification",
+            "all_notification_types" : "Voir tous les types de notifications",
+            "delete_notification_type" : "Supprimer un type de notification",
+            "modify_notification_type" : "Modifier un type de notification",
+        },
+        "patients_explorations" : {
+            "all_results" : "Voir tous les résultats d'exploration d'un patient",
+            "more_exp_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "patients_imagerie" : {
+            "all_results" : "Voir tous les résultats d'imagerie d'un patient",
+            "more_ima_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "patients_laboratoire" : {
+            "all_results" : "Voir tous les résultats de laboratoire d'un patient",
+            "more_lab_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "charge_patients" : {
+            "extract_verified_patients" : "Extraire les patients vérifiés de Gnuhealth",
+            "extract_patients" : "Extraire un patient en particulier de GNUHealth",
+            "all_patients" : "Voir tous les patients",
+            "delete_patient" : "Supprimer tous les patients",
+            "count_patients" : "Voir le nombre de patients",
+            "update_patients" : "Mettre à jour le patients",
+            "confirm_patients" : "Confirmer un patients",
+            "get_info_patient" : "Voir les informations d'un patient",
+            "all_invoices" : "Voir toutes les factures d'un patients",
+            "all_products" : "Voir tous les produits / examen d'une facture d'un patient",            
+        },
+        "patients_prescriptions" : {
+            "all_prescriptions" : "Toutes les prescriptions",
+            "add_prescriptions" : "Ajouter une nouvelle prescriptions",
+            "delete_prescription" : "Supprimer une prescriptions",
+            "get_prescription" : "Voir une prescription bien définies",
+            "get_devis_prescriptions" : "Récupérer toutes les prescriptions demandant un devis",
+            "recuperer_image_prescription" : "Récupérer l'image d'une prescription",
+            "all_user_prescription" : "Toutes les prescriptions d'un utilisateur",
+        },
+        "saved_patients" : {
+            "get_image" : "Récupérer l'image d'un pré-enregistrement de patients",
+            "validate_saved_patient" : "Valider le pré enregistrement d'un patient",
+            "all_saved_patients" : "Tous les patients qui demandent un pré-enregistrement",
+            "delete_save_patient" : "Supprimer les patients qui demandent un pré-enregistrement",
+            "get_validated_save_patient" : "Voir tous les pré-enregistrement qui ont été validés et qui sont demandés par un seul patient",
+            "get_patient_saves" : "Voir tous les pré-enregistrement qui ont été demandé par un patient"
+        },
+        "suggestions" : {
+            "create_suggestion" : "Créer des suggestions",
+            "get_suggestions" : "Voir toutes les suggestions",
+            "get_suggestion" : "COnsulter une seule suggestion",
+            "update_suggestion" : "Mettre à Jour une suggestion",
+            "delete_suggestion" : "Supprimer une suggestion",
+            "suggestions_by_user" : "Les suggestions en fonctions d'un utilisateur",
+            "suggestions_for_user" : "Les suggestions pour un utilisateur précis",
+        },
+        "send_results_results" : {
+            "get_results" : "Voir les résultats",
+            "more_informations" : "Plus d'informations à propos d'un résultat",
+        },
+        "send_results" : {
+            "send" : "Envoyer un résultat",
+            "all_send_results" : "Tous les résultats envoyés",
+            "results_by_patient" : "Résultats Par Patients",
+            "results_by_doctor" : "Résultats par Docteurs",
+            "del_send_result" : "Supprimer un résultat envoyé.",
+            "modify_send_result" : "Modifier un résultat envyé",
+        }
+
+    },
+    "patients" : {
+        "requete" : {
+            "delete_request": "Supprimer une rêquete",
+            "all_requests" : "Voir toutes les rêquetes",
+            "nbr_requests" : "Voir le nombre de rêquetes",
+            "validate_request" : "Valider une rêquete",
+            "get_requests_by_id" : "Voir les rêquetes d'un utilisateur",
+            "rejet_request" : "Rejeter une rêquete",
+        },
+        "blog" : {
+            "all_article" : "Tous les articles",
+            "get_article" : "Voir un article en particulier",
+            "retrieve_image" : "Récupérer l'image d'un blog",
+        },
+        "doctors_charge_doctors" : {
+            "get_info_doctor" : "Voir les informations d'un docteur",
+            "getDocInfosByMatricule" : "Voir les informations d'un docteur avec son matricule"
+        },
+        "notifications_general" : {
+            "add_notification" : "Ajouter une nouvelle notification",
+            "all_notifications" : "Voir toutes les notifications",
+            "delete_notification" : "Supprimer une notification",
+            "modify_notification" : "Modifier une notification",
+            "mark_notification_as_read" : "Marquer une notification comme lue",
+            "user_notifications" : "Voir les notifications d'un utilisateur",
+            "all_user_notifications" : "Voir les notifications de tous les utilisateurs - Les notifications qui ont été classé comme pour tous les utilisateurs",
+            "send_email_notification" : "Envoyer une notification par email à tous les utilisateurs",
+            "notification_by_type" : "Notifications par type",
+            "notification_by_etiquette" : "Notifications par étiquette",
+        },
+        "notifications_types" : {
+            "get_notification_type" : "Connaitre un type de notification",
+        },
+        "patients_explorations" : {
+            "all_results" : "Voir tous les résultats d'exploration d'un patient",
+            "more_exp_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "patients_imagerie" : {
+            "all_results" : "Voir tous les résultats d'imagerie d'un patient",
+            "more_ima_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "patients_laboratoire" : {
+            "all_results" : "Voir tous les résultats de laboratoire d'un patient",
+            "more_lab_informations" : "Voir les critères de chaque résultat d'examen",
+        },
+        "charge_patients" : {
+            "update_patients" : "Mettre à jour le patients",
+            "confirm_patients" : "Confirmer un patients",
+            "get_info_patient" : "Voir les informations d'un patient",
+            "all_invoices" : "Voir toutes les factures d'un patients",
+            "all_products" : "Voir tous les produits / examen d'une facture d'un patient",            
+        },
+        "patients_prescriptions" : {
+            "all_prescriptions" : "Toutes les prescriptions",
+            "add_prescriptions" : "Ajouter une nouvelle prescriptions",
+            "delete_prescription" : "Supprimer une prescriptions",
+            "get_prescription" : "Voir une prescription bien définies",
+            "get_devis_prescriptions" : "Récupérer toutes les prescriptions demandant un devis",
+            "recuperer_image_prescription" : "Récupérer l'image d'une prescription",
+            "all_user_prescription" : "Toutes les prescriptions d'un utilisateur",
+        },
+        "saved_patients" : {
+            "get_image" : "Récupérer l'image d'un pré-enregistrement de patients",
+            "all_saved_patients" : "Tous les patients qui demandent un pré-enregistrement",
+            "add_save_patients" : "Ajouter un pré-enregistrement pour eamen",
+            "delete_save_patient" : "Supprimer les patients qui demandent un pré-enregistrement",
+            "get_validated_save_patient" : "Voir tous les pré-enregistrement qui ont été validés et qui sont demandés par un seul patient",
+            "get_patient_saves" : "Voir tous les pré-enregistrement qui ont été demandé par un patient"
+        },
+        "suggestions" : {
+            "create_suggestion" : "Créer des suggestions",
+            "get_suggestions" : "Voir toutes les suggestions",
+            "get_suggestion" : "COnsulter une seule suggestion",
+            "update_suggestion" : "Mettre à Jour une suggestion",
+            "delete_suggestion" : "Supprimer une suggestion",
+            "suggestions_by_user" : "Les suggestions en fonctions d'un utilisateur",
+            "suggestions_for_user" : "Les suggestions pour un utilisateur précis",
+        },
+        "send_results_results" : {
+            "get_results" : "Voir les résultats",
+            "more_informations" : "Plus d'informations à propos d'un résultat",
+        },
+        "send_results" : {
+            "send" : "Envoyer un résultat",
+            "results_by_patient" : "Résultats Par Patients",
+            "del_send_result" : "Supprimer un résultat envoyé.",
+            "modify_send_result" : "Modifier un résultat envyé",
+        },
+    },
+    "doctors" : {
+        "requete" : {
+            "delete_request": "Supprimer une rêquete",
+            "all_requests" : "Voir toutes les rêquetes",
+            "nbr_requests" : "Voir le nombre de rêquetes",
+            "validate_request" : "Valider une rêquete",
+            "get_requests_by_id" : "Voir les rêquetes d'un utilisateur",
+            "rejet_request" : "Rejeter une rêquete",
+        },
+        "blog" : {
+            "all_article" : "Tous les articles",
+            "get_article" : "Voir un article en particulier",
+            "retrieve_image" : "Récupérer l'image d'un blog",
+        },
+        "calcul_commissions" : {
+            "solde" : "Solde du docteur",
+            "general_solde" : "solde general du docteur",
+            "invoiced_solde_by_mounth" : "Commission payé par mois pour un docteur",
+            "invoiced_solde_by_year" : "Commission payé par année pour un docteur",
+            "actual_solde" : "Solde actuel d'un docteur",
+        },
+        "doctors_charge_doctors" : {
+            "charge_doctors" : "Charger tous les docteurs de GNUHealth",
+            "charge_one_doctors" : "Charger un docteur en particuliers",
+            "all_doctors" : "Tous les docteurs",
+            "delete_doctor" : "Supprimer un docteur",
+            "nbr_doctor" : "Nombre de Docteur",
+            "confirm_doctor" : "Confirmer des docteurs",
+            "update_doctor" : "Mettre à Jour un docteur",
+            "get_info_doctor" : "Voir les informations d'un docteur",
+            "getDocInfosByMatricule" : "Voir les informations d'un docteur avec son matricule"
+        },
+        "gnudoctors" : {
+            "all_commission" : "Regarder ou consulter toutes les commissions de tous les docteurs",
+            "exams_patients" : "La totalité des commissions d'un docteur",
+            "nbr_list_exams" : "Le nombre exacte des des examens",
+            "simple_research" : "Calcul des différentes commissions d'un docteur sous une date précise",
+            "today_transaction" : "Les transactions journalières",
+            "lists_commissions" : "lISTE DES ÉTATS DE COMMISSION D'UN DOCTEUR",
+        },
+        "notifications_general" : {
+            "add_notification" : "Ajouter une nouvelle notification",
+            "all_notifications" : "Voir toutes les notifications",
+            "delete_notification" : "Supprimer une notification",
+            "modify_notification" : "Modifier une notification",
+            "mark_notification_as_read" : "Marquer une notification comme lue",
+            "user_notifications" : "Voir les notifications d'un utilisateur",
+            "all_user_notifications" : "Voir les notifications de tous les utilisateurs - Les notifications qui ont été classé comme pour tous les utilisateurs",
+            "send_email_notification" : "Envoyer une notification par email à tous les utilisateurs",
+            "notification_by_type" : "Notifications par type",
+            "notification_by_etiquette" : "Notifications par étiquette",
+            "delete_all_user_notification" : "L'Utilisateur Supprime toutes ses notifications."
+        },
+        "notifications_types" : {
+            "get_notification_type" : "Connaitre un type de notification",
+        },
+        "suggestions" : {
+            "create_suggestion" : "Créer des suggestions",
+            "get_suggestions" : "Voir toutes les suggestions",
+            "get_suggestion" : "COnsulter une seule suggestion",
+            "update_suggestion" : "Mettre à Jour une suggestion",
+            "delete_suggestion" : "Supprimer une suggestion",
+            "suggestions_by_user" : "Les suggestions en fonctions d'un utilisateur",
+            "suggestions_for_user" : "Les suggestions pour un utilisateur précis",
+        },
+        "send_results_results" : {
+            "get_results" : "Voir les résultats",
+            "more_informations" : "Plus d'informations à propos d'un résultat",
+        },
+        "send_results" : {
+            "send" : "Envoyer un résultat",
+            "results_by_patient" : "Résultats Par Patients",
+            "results_by_doctor" : "Résultats par Docteurs",
+        },
+        
+    }
+
+}

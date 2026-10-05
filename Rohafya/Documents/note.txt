@@ -1,0 +1,8 @@
+1. Pour lancer le serveur :
+    flask run --debugger
+
+2. Pour Initialiser la base de données 
+    flask --app Rohafya init-db
+
+3. Se rappeler de terminer doctor model
+

@@ -1,0 +1,32 @@
+{
+  "_lisez_moi": "Dictionnaire des analyses reconnues dans les comptes rendus PDF. Pour chaque analyse : synonymes (en minuscules, sans accents), unité de référence ROHAFYA, unités acceptées avec le facteur qui convertit vers l'unité de référence, bornes plausibles (dans l'unité de référence) au-delà desquelles la lecture est jugée suspecte. À FAIRE VALIDER PAR UN BIOLOGISTE avant usage réel. Les numérations différentielles (neutrophiles, lymphocytes...) sont volontairement absentes : pourcentage et valeur absolue cohabitent souvent sur une même ligne, elles partent donc en relecture.",
+  "analyses": {
+    "HB": {"libelle": "Hémoglobine", "synonymes": ["hemoglobine", "hb", "hgb"], "unite": "g/dl", "unites": {"g/dl": 1.0, "g/100ml": 1.0, "g/l": 0.1}, "plausible": [2, 25]},
+    "HT": {"libelle": "Hématocrite", "synonymes": ["hematocrite", "ht", "hct"], "unite": "%", "unites": {"%": 1.0}, "plausible": [5, 80]},
+    "GR": {"libelle": "Globules rouges", "synonymes": ["globules rouges", "hematies", "erythrocytes", "gr", "rbc"], "unite": "T/l", "unites": {"t/l": 1.0, "x10^12/l": 1.0, "10^12/l": 1.0, "10^6/mm3": 1.0}, "plausible": [0.5, 10]},
+    "VGM": {"libelle": "Volume globulaire moyen", "synonymes": ["volume globulaire moyen", "v.g.m.", "vgm", "mcv"], "unite": "fl", "unites": {"fl": 1.0, "um3": 1.0}, "plausible": [40, 150]},
+    "TCMH": {"libelle": "TCMH", "synonymes": ["teneur corpusculaire moyenne en hemoglobine", "t.c.m.h.", "tcmh", "mch"], "unite": "pg", "unites": {"pg": 1.0}, "plausible": [10, 50]},
+    "CCMH": {"libelle": "CCMH", "synonymes": ["concentration corpusculaire moyenne en hemoglobine", "c.c.m.h.", "ccmh", "mchc"], "unite": "g/dl", "unites": {"g/dl": 1.0, "%": 1.0}, "plausible": [20, 45]},
+    "GB": {"libelle": "Leucocytes", "synonymes": ["leucocytes", "globules blancs", "gb", "wbc"], "unite": "G/l", "unites": {"g/l": 1.0, "x10^9/l": 1.0, "10^9/l": 1.0, "/mm3": 0.001}, "plausible": [0.1, 200]},
+    "PLQ": {"libelle": "Plaquettes", "synonymes": ["plaquettes", "thrombocytes", "plt"], "unite": "G/l", "unites": {"g/l": 1.0, "x10^9/l": 1.0, "10^9/l": 1.0, "/mm3": 0.001}, "plausible": [1, 2000]},
+    "GLY": {"libelle": "Glycémie", "synonymes": ["glycemie", "glucose"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.18, "mg/dl": 0.01}, "plausible": [0.1, 10]},
+    "HBA1C": {"libelle": "Hémoglobine glyquée (HbA1c)", "synonymes": ["hemoglobine glyquee", "hba1c", "hb a1c"], "unite": "%", "unites": {"%": 1.0}, "plausible": [2, 20]},
+    "CREA": {"libelle": "Créatininémie", "synonymes": ["creatininemie", "creatinine"], "unite": "mg/l", "unites": {"mg/l": 1.0, "umol/l": 0.113, "mg/dl": 10.0}, "plausible": [1, 200]},
+    "UREE": {"libelle": "Urée", "synonymes": ["uree", "azotemie"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.06}, "plausible": [0.01, 5]},
+    "NA": {"libelle": "Sodium", "synonymes": ["sodium", "natremie", "na+"], "unite": "mmol/l", "unites": {"mmol/l": 1.0, "meq/l": 1.0}, "plausible": [100, 180]},
+    "K": {"libelle": "Potassium", "synonymes": ["potassium", "kaliemie", "k+"], "unite": "mmol/l", "unites": {"mmol/l": 1.0, "meq/l": 1.0}, "plausible": [1, 10]},
+    "CL": {"libelle": "Chlore", "synonymes": ["chlorures", "chloremie", "chlore", "cl-"], "unite": "mmol/l", "unites": {"mmol/l": 1.0, "meq/l": 1.0}, "plausible": [60, 140]},
+    "CT": {"libelle": "Cholestérol total", "synonymes": ["cholesterol total"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.387}, "plausible": [0.5, 10]},
+    "HDL": {"libelle": "HDL-cholestérol", "synonymes": ["hdl-cholesterol", "hdl cholesterol", "cholesterol hdl", "hdl"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.387}, "plausible": [0.05, 3]},
+    "LDL": {"libelle": "LDL-cholestérol", "synonymes": ["ldl-cholesterol", "ldl cholesterol", "cholesterol ldl", "ldl"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.387}, "plausible": [0.05, 8]},
+    "TG": {"libelle": "Triglycérides", "synonymes": ["triglycerides", "tg"], "unite": "g/l", "unites": {"g/l": 1.0, "mmol/l": 0.885}, "plausible": [0.1, 30]},
+    "ASAT": {"libelle": "ASAT (TGO)", "synonymes": ["asat", "sgot", "tgo"], "unite": "UI/l", "unites": {"ui/l": 1.0, "u/l": 1.0}, "plausible": [1, 10000]},
+    "ALAT": {"libelle": "ALAT (TGP)", "synonymes": ["alat", "sgpt", "tgp"], "unite": "UI/l", "unites": {"ui/l": 1.0, "u/l": 1.0}, "plausible": [1, 10000]},
+    "GGT": {"libelle": "Gamma GT", "synonymes": ["gamma glutamyl transferase", "gamma-gt", "gamma gt", "ggt"], "unite": "UI/l", "unites": {"ui/l": 1.0, "u/l": 1.0}, "plausible": [1, 5000]},
+    "CRP": {"libelle": "Protéine C réactive (CRP)", "synonymes": ["proteine c reactive", "crp"], "unite": "mg/l", "unites": {"mg/l": 1.0, "mg/dl": 10.0}, "plausible": [0, 600]},
+    "TSH": {"libelle": "TSH", "synonymes": ["tsh ultrasensible", "tshus", "tsh"], "unite": "mUI/l", "unites": {"mui/l": 1.0, "uui/ml": 1.0}, "plausible": [0.001, 200]},
+    "FERR": {"libelle": "Ferritine", "synonymes": ["ferritinemie", "ferritine"], "unite": "ng/ml", "unites": {"ng/ml": 1.0, "ug/l": 1.0}, "plausible": [1, 20000]},
+    "PSA": {"libelle": "PSA total", "synonymes": ["psa total", "psa"], "unite": "ng/ml", "unites": {"ng/ml": 1.0, "ug/l": 1.0}, "plausible": [0, 5000]},
+    "AU": {"libelle": "Acide urique", "synonymes": ["acide urique", "uricemie"], "unite": "mg/l", "unites": {"mg/l": 1.0, "umol/l": 0.168}, "plausible": [5, 200]}
+  }
+}

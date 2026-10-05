@@ -1,0 +1,33 @@
+########################################## PROCÉDURE POUR DOCTEURS ##########################################
+
+1. On charge les différents docteurs de Stone pdmd Santé.
+    Dans ce chargement nous récupérons le numéro FEDERATIONID
+2. Campagne pour accessibilité des informations des commissions.
+    Pour chaque docteurs qui se présentera nous récupérons son 
+    email et ensuite nous lui communiquerons le FEDERATIONID par 
+    Whatsapp.
+3. Le Docteur entrera d'abord premièrement son FEDERATIONID.
+    Ensuite un mail lui sera envoyé avec les informations de 
+    connexion comme username et password.
+4. Une fois le Docteur connecté, Remplir ses informations.
+    Une fois que le docteur est connecté, la première des choses
+    est qu'il remplisse ses différentes informations avant de 
+    continuer.
+    Une fois les informations remplies, il obtient les différentes 
+    commissions journalières et les différents patients envoyés.
+
+
+########################################## PROCÉDURE POUR PATIENTS ##########################################
+
+1. Prise de renseignements des patients
+    Les différents patients qui se présentent à la PDMD se verront
+    demandés s'ils veulent avoir les informations et résultats en ligne.
+2. On donne le FEDERATIONID au patient
+    Si le patient souhaite avoir ses différentes informations et rapports
+    par mail, on donne le FEDERATIONID du patient et il nous fourni 
+    son mail.
+3. Connexion du patient.
+    Le patient se connectera de la même manière que le docteur
+    en entrant le FEDERATIONID et en reçcevant ses différentes informations
+    de connexion par le mail qu'il nous a donné au préalable.
+

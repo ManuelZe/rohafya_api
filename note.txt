@@ -1,0 +1,23 @@
+------------------------------------- MIGRATIONS FLASK --------------------------------------
+
+1. Installation : 
+    pip install Flask-Migrate
+2. Initialisation
+    migrate = Migrate(app, db)
+3. Utilisation :
+    flask --app Rohafya db init
+4. Après Modification :
+    flask --app Rohafya db migrate -m "Ajout des champs au requests"
+5. Mettre à jour la base de données :
+    flask --app Rohafya db upgrade
+
+
+------------------------------------- AJOUT DES PERMISSIONS --------------------------------------
+
+
+cd /home/gnuhealth/Rohafya
+python3 -m Rohafya.permissions.__init__permission
+
+Après avoir ajouté, modifié ou supprimé une permission, il faut se rassurer que le rôle en question a été mis à jour.
+update role avec la permission modifiée
+

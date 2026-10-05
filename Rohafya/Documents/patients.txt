@@ -1,0 +1,9 @@
+PRINCIPE DE FONCTIONNEMENT DES PATIENTS : 
+
+1. CHARGEMENT DES PATIENTS
+    Le principe de chargement des patients est simple.
+    - Nous créons une case à cocher qui marquera si le patient désire Avoir
+        ses informations et résultats en ligne ou pas.
+    - Cette case à cochée sera présente au niveau du modèle
+        gnuhealth.patients car c'est à ce niveau que le patient en lui même
+        est recensé.

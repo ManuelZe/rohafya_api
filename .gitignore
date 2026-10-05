@@ -1,0 +1,7 @@
+flaskvenv/*
+instance
+__pycache__
+Flask.tar.gz
+envDoc
+
+

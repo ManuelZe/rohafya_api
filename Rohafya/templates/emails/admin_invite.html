@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accès administrateur ROHAFYA</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f6fa; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fa; padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px; background:#ffffff; border-radius:12px; padding:32px 28px;">
+                    <tr>
+                        <td style="font-size:22px; font-weight:700; color:#1a54c9; padding-bottom:16px;">ROHAFYA</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:16px; line-height:1.5; padding-bottom:16px;">
+                            Bonjour {{ first_name }},<br><br>
+                            Vous êtes désormais administrateur de <strong>{{ establishment }}</strong> sur ROHAFYA&nbsp;:
+                            vous pouvez suivre les patients rattachés, générer leurs QR codes, gérer les médecins et les réglages de l'établissement.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:15px; line-height:1.5; padding-bottom:20px;">
+                            Pour vous connecter, ouvrez ROHAFYA, choisissez <strong>« Code par e-mail »</strong> et saisissez l'adresse <strong>{{ email }}</strong>&nbsp;:
+                            vous recevrez un code à usage unique.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding-bottom:12px;">
+                            <a href="{{ front_url }}/connexion" style="display:inline-block; background:#1a54c9; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px;">Ouvrir ROHAFYA</a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

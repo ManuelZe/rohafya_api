@@ -1,4 +1,4 @@
-# DoctorAPI
+# Rohafya
 
 ## Installation
 
@@ -17,23 +17,23 @@
 4. **Lancement**
    Lancer l'application avec Gunicorn (adapter l'IP et le port si nécessaire) :
    ```bash
-   gunicorn -w 4 -b 172.17.0.7:7600 "DoctorAPI:create_app()"
+   gunicorn -w 4 -b 172.17.0.7:7600 "Rohafya:create_app()"
    ```
 
 ## Migrations (Flask-Migrate)
 
 * **Installation** : `pip install Flask-Migrate`
 * **Initialisation** : `migrate = Migrate(app, db)`
-* **Init DB** : `flask --app DoctorAPI db init`
-* **Créer une migration** : `flask --app DoctorAPI db migrate -m "Message"`
-* **Mise à jour DB** : `flask --app DoctorAPI db upgrade`
+* **Init DB** : `flask --app Rohafya db init`
+* **Créer une migration** : `flask --app Rohafya db migrate -m "Message"`
+* **Mise à jour DB** : `flask --app Rohafya db upgrade`
 
 ## Permissions
 
 Pour ajouter les permissions :
 ```bash
-cd /home/gnuhealth/DoctorAPI
-python3 -m DoctorAPI.permissions.__init__permission
+cd /home/gnuhealth/Rohafya
+python3 -m Rohafya.permissions.__init__permission
 ```
 
 ## Procédures

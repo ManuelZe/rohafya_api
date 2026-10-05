@@ -1,0 +1,4 @@
+gunicorn -w 4 -b 172.22.0.2 "Rohafya:create_app()"
+
+
+gunicorn -w 4 -b 172.22.0.2:4045 "Rohafya:create_app()"

@@ -1,0 +1,11 @@
+1. Installation des dépendances
+	Après avoir créer l'environnement virtuel, l'activer et faire ceci : pip3 install -r requirements.txt
+
+2. Créer la base de donnée 
+	Créer la base de donnée doctor
+
+3. Changer le port POSTGRES dans le chemin URI du fichier __init__.py
+
+4. Lancer le service avec la commande 
+	Lancer la commande suivante, en changeant l'adresse IP et le port sur lequel l'application doit s'exécuter
+	gunicorn -w 4 -b 172.17.0.7:7600 "Rohafya:create_app()"
