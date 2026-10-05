@@ -16,7 +16,11 @@ ROHAFYA sert désormais plusieurs établissements (*tenants*). Un patient ou un 
    ```bash
    flask --app Rohafya saas create-superadmin admin@exemple.com --first-name Prénom --last-name Nom
    ```
-4. **Variable d'environnement `ROHAFYA_FRONT_URL`** (l'ancien nom `EDEN_FRONT_URL` est encore lu) : adresse publique du front-end, utilisée dans les QR codes et les e-mails. Par défaut : `https://rohafya.com`. À définir dans le conteneur, pas dans `env_prod.py`.
+4. **Adresse du front-end dans les QR codes et les e-mails.** Pour une requête venue d'un front autorisé, l'API reprend l'origine de cette requête (en-tête `Origin`) : `http://localhost:4000` en local, `https://rohafya.com` en ligne. Une origine qui n'est pas dans la liste n'est jamais reprise.
+   - **`ROHAFYA_FRONT_ORIGINS`** : fronts autorisés, séparés par des virgules, sans `/` final. Par défaut (`DEFAULT_FRONT_ORIGINS` dans `saas/constants.py`) : `https://rohafya.com`, `https://preprod.rohafya.com`, `http://localhost:4000` et `http://localhost:4200`. La même liste sert à CORS (`__init__.py`, qui y ajoute `http://localhost:8081`).
+   - **`ROHAFYA_FRONT_URL`** (l'ancien nom `EDEN_FRONT_URL` est encore lu) : adresse utilisée sans origine reconnue, notamment pour les envois du logiciel de l'établissement (`/ingest`, `/fhir`). Par défaut : `https://rohafya.com`.
+
+   Ces deux variables se définissent dans le conteneur, pas dans `env_prod.py`.
 5. **E-mails** : la connexion par code utilise la configuration SMTP existante (`MAIL_*`). Vérifiez qu'un e-mail de test part bien.
 6. **Imports PDF — fermés par défaut (« disponible prochainement »)** : tant que la variable d'environnement `ROHAFYA_PDF_IMPORT_ENABLED` (ou l'ancien `EDEN_PDF_IMPORT_ENABLED`) ne vaut pas `true`, toutes les routes d'import PDF (`/saas/admin/tenants/<id>/pdf-imports…` et `POST /ingest/v1/pdf`) répondent **403**, y compris pour le super-administrateur. Pour ouvrir : définir `ROHAFYA_PDF_IMPORT_ENABLED=true` dans le conteneur de l'API, redémarrer, puis passer `PDF_IMPORT_ENABLED` à `true` dans `src/app/saas/features.ts` du front et le reconstruire. Avant cela, installer `pdfplumber` (ajouté à `requirements.txt`) puis redémarrer l'API. Sans lui, les routes d'import PDF répondent 503.
    ```bash

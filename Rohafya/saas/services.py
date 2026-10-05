@@ -7,7 +7,7 @@ import os
 import secrets
 from email.utils import parsedate_to_datetime
 
-from flask import current_app, render_template
+from flask import current_app, has_request_context, render_template, request
 from flask_mail import Mail, Message
 from sqlalchemy import func, null, select
 from sqlalchemy.exc import IntegrityError
@@ -41,6 +41,7 @@ from .constants import (
     SHORT_CODE_LENGTH,
     SOURCE_GNUHEALTH,
     SUPER_ADMIN_ROLES,
+    front_origins,
 )
 from .models import AuditLog, EmailOtp, LinkToken, PatientLink, PractitionerLink, Tenant, TenantMember, TenantRecord
 
@@ -120,7 +121,15 @@ def to_float(value):
 
 
 def front_url():
-    """URL publique du front-end ROHAFYA (utilisée dans les QR codes et les e-mails)."""
+    """URL publique du front-end ROHAFYA (utilisée dans les QR codes et les e-mails).
+
+    Une requête venant d'un front autorisé (en-tête Origin) reçoit des liens vers ce même front :
+    localhost:4000 en local, rohafya.com en ligne. Sinon (envoi machine à machine) : ROHAFYA_FRONT_URL.
+    """
+    if has_request_context():
+        origin = (request.headers.get("Origin") or "").rstrip("/")
+        if origin in front_origins():
+            return origin
     url = os.environ.get("ROHAFYA_FRONT_URL") or current_app.config.get("ROHAFYA_FRONT_URL") or "https://rohafya.com"
     return url.rstrip("/")
 

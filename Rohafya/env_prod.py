@@ -19,21 +19,22 @@ class ConfigProdClass(object):
 
 
     # Flask settings
-    SECRET_KEY = '21481decfe9c4cdfg61fdbe11b22b82gzerf5zefzef498ze7fze4f6ze48f1zc8z4fz98ef'
-    JWT_SECRET_KEY = 'zgfezef49ze4f1ze4f6zrg4h4tkit9yjh4f64uis6rt84s64ryh198tu4se98yrikd6yfh84fg984kjd6jh84utth9r8e4h1s6frg4hjs6t4hjdry64js987j4sr984jhs'
+    # Secrets : fournis par l'environnement (voir docs/DEPLOIEMENT_DOCKER.md), jamais écrits dans le code.
+    SECRET_KEY = os.environ.get("ROHAFYA_SECRET_KEY")
+    JWT_SECRET_KEY = os.environ.get("ROHAFYA_JWT_SECRET_KEY")
 
     # Flask-SQLAlchemy settings
-    SQLALCHEMY_DATABASE_URI = 'postgresql://gnuhealth:toor@localhost:5432/gnu_doctor2'    # File-based SQL database
+    SQLALCHEMY_DATABASE_URI = os.environ.get("ROHAFYA_DATABASE_URL")    # postgresql://utilisateur:motdepasse@hote:5432/base
     SQLALCHEMY_TRACK_MODIFICATIONS = True    # Avoids SQLAlchemy warning
 
     # Flask-Mail SMTP server settings
-    MAIL_SERVER = 'smtp.office365.com'
-    MAIL_PORT = 587
+    MAIL_SERVER = os.environ.get("ROHAFYA_MAIL_SERVER", "smtp.office365.com")
+    MAIL_PORT = int(os.environ.get("ROHAFYA_MAIL_PORT", "587"))
     MAIL_USE_SSL = False
     MAIL_USE_TLS = True
-    MAIL_USERNAME = 'eden.no-reply@pdmdsante.com'
-    MAIL_PASSWORD = '9C@}xeG79eYe!7'
-    MAIL_DEFAULT_SENDER = '"PDMD - EDEN" <eden.no-reply@pdmdsante.com>'
+    MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "eden.no-reply@pdmdsante.com")
+    MAIL_PASSWORD = os.environ.get("ROHAFYA_MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"PDMD - EDEN" <eden.no-reply@pdmdsante.com>')
 
     # Flask-User settings
     USER_APP_NAME = "Doctors And Patients App"      # Shown in and email templates and page footers
@@ -41,7 +42,7 @@ class ConfigProdClass(object):
     USER_ENABLE_USERNAME = True    # Disable username authentication
     USER_EMAIL_SENDER_NAME = USER_APP_NAME
     USER_EMAIL_SENDER_EMAIL = "verified@pdmdsante.com"
-    SECURITY_PASSWORD_SALT = "bvKQv321v324fr56v46sf4v6"
+    SECURITY_PASSWORD_SALT = os.environ.get("ROHAFYA_PASSWORD_SALT")
     USER_LOGIN_URL = '/user/login'
     USER_LOGOUT_URL = '/user/logout'
     USER_ENABLE_CONFIRM_EMAIL = False

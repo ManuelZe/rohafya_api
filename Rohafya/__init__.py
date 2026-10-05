@@ -19,12 +19,13 @@ from flask_jwt_extended import JWTManager
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import unset_jwt_cookies, verify_jwt_in_request
 from sqlalchemy.orm.attributes import flag_modified
+from werkzeug.middleware.proxy_fix import ProxyFix
 import json
 import requests
 import logging
 from .env_prod import ConfigProdClass
 # from .env_dev import ConfigEnvClass
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 # Initialisation des extensions en dehors de create_app
 db = SQLAlchemy()
@@ -44,26 +45,46 @@ def create_app():
     # Production environment
     app.config.from_object(ConfigProdClass)
     
-    # Suppression du slash final sur l'origine https://rohafya.com
+    # Origines sans slash final ; les fronts autorisés sont listés dans saas/constants.py.
+    from .saas.constants import front_origins
     CORS(
         app, 
-        origins=["http://localhost:4200", "http://localhost:8081", "https://rohafya.com"], 
+        origins=[*front_origins(), "http://localhost:8081"], 
         supports_credentials=True, 
         allow_headers=["Content-Type", "Authorization"]
     )
 
-    app.config['TRYTON_CONFIG'] = '/home/gnuhealth/gnuhealth/tryton/server/config/trytond.conf'
-    app.config['TRYTON_DATABASE'] = 'pdmd_sante'
-    app.config['TRYTON_USER'] = 0
+    app.config['TRYTON_CONFIG'] = os.environ.get('TRYTON_CONFIG', '/home/gnuhealth/gnuhealth/tryton/server/config/trytond.conf')
+    app.config['TRYTON_DATABASE'] = os.environ.get('TRYTON_DATABASE', 'pdmd_sante')
+    app.config['TRYTON_USER'] = int(os.environ.get('TRYTON_USER', '0'))
+    # Lecture directe de GNU Health : active par défaut. ROHAFYA_GNUHEALTH=false pour un déploiement
+    # sans GNU Health (conteneur sur un VPS) : les données arrivent alors par le connecteur.
+    app.config['ROHAFYA_GNUHEALTH'] = os.environ.get('ROHAFYA_GNUHEALTH', 'true').strip().lower() in ('1', 'true', 'oui', 'yes')
     app.config['CORS_HEADERS'] = 'Content-Type'
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
-    app.config['UPLOAD_FOLDER'] = 'files/'
+    app.config['UPLOAD_FOLDER'] = os.environ.get('ROHAFYA_UPLOAD_FOLDER', 'files/')
+
+    manquants = [nom for nom, cle in (("ROHAFYA_SECRET_KEY", "SECRET_KEY"), ("ROHAFYA_JWT_SECRET_KEY", "JWT_SECRET_KEY"),
+                                      ("ROHAFYA_DATABASE_URL", "SQLALCHEMY_DATABASE_URI"), ("ROHAFYA_PASSWORD_SALT", "SECURITY_PASSWORD_SALT"))
+                 if not app.config.get(cle)]
+    if manquants:
+        raise RuntimeError(f"Variables d'environnement manquantes : {', '.join(manquants)} (voir docs/DEPLOIEMENT_DOCKER.md).")
+
+    # Derrière un reverse proxy (Nginx Proxy Manager…) : ROHAFYA_PROXIES = nombre de proxys de confiance,
+    # pour retrouver l'adresse IP et le schéma (https) du client.
+    proxies = int(os.environ.get('ROHAFYA_PROXIES', '0'))
+    if proxies:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
 
     # Initialisation des extensions avec l'application Flask
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    tryton.init_app(app)
+    if app.config['ROHAFYA_GNUHEALTH']:
+        tryton.init_app(app)
+    else:
+        from .tryton_absent import desactiver_tryton
+        desactiver_tryton(tryton)
     jwt.init_app(app)
 
     # Charger les modèles et l'instance de User
@@ -174,7 +195,7 @@ def create_app():
         l'adresse IP et les informations du navigateur.
         """
         # Ne pas intercepter OPTIONS afin d'autoriser la génération des entêtes CORS
-        if request.method == "OPTIONS" or request.path == "/heartbeat":
+        if request.method == "OPTIONS" or request.path in ("/heartbeat", "/sante"):
             return
         # Les envois machine à machine des établissements ne sont pas des visites d'utilisateurs.
         if request.path.startswith(("/ingest/", "/fhir/")):
@@ -274,6 +295,23 @@ def create_app():
     @app.route('/hello')
     def hello():
         return 'Hello, World!'
+
+    @app.route('/sante')
+    def sante():
+        """État de l'API pour les sondes (healthcheck Docker, supervision) ; non journalisé."""
+        try:
+            db.session.execute(text("SELECT 1"))
+            base = "ok"
+        except Exception as exc:
+            logging.error(f"Base de données injoignable : {exc}")
+            db.session.rollback()
+            base = "injoignable"
+        etat = {
+            "statut": "ok" if base == "ok" else "degrade",
+            "base": base,
+            "gnuhealth": "actif" if app.config['ROHAFYA_GNUHEALTH'] else "desactive",
+        }
+        return jsonify(etat), 200 if base == "ok" else 503
 
     @app.route('/routes')
     def list_routes():

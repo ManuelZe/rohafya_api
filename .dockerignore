@@ -1,0 +1,27 @@
+# Seuls Rohafya/ et docker/ entrent dans l'image : tout le reste est exclu.
+**/__pycache__
+**/*.pyc
+**/*.swp
+**/*.save
+.git
+.github
+.env
+deploy/stack.env
+
+# Environnements virtuels et paquets locaux
+Rohafya/envDoc
+envDoc
+flaskvenv
+
+# Secrets et fichiers locaux
+cert.pem
+key.pem
+username_password.txt
+files
+
+# Hors image de l'API
+connecteur_gnuhealth
+Rohafya/tests
+Rohafya/Documents
+Rohafya/scripting_tryton
+docs

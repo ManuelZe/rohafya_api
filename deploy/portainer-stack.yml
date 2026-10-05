@@ -1,0 +1,118 @@
+# Stack Portainer de l'API ROHAFYA : API + PostgreSQL + sauvegardes quotidiennes.
+# À coller dans Portainer → Stacks → Add stack → Web editor.
+# Les ${VARIABLES} se renseignent dans la section « Environment variables » de la stack
+# (modèle : deploy/stack.env.exemple). Documentation : docs/DEPLOIEMENT_DOCKER.md
+
+services:
+  api:
+    image: ${ROHAFYA_IMAGE:-ghcr.io/manuelze/rohafya-api}:${ROHAFYA_VERSION:-latest}
+    # Nom utilisé par Nginx Proxy Manager pour joindre l'API (« Forward Hostname »).
+    container_name: ${ROHAFYA_NOM:-rohafya}-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ROHAFYA_DATABASE_URL: postgresql://rohafya:${POSTGRES_PASSWORD:?Définir POSTGRES_PASSWORD}@db:5432/rohafya
+      ROHAFYA_SECRET_KEY: ${ROHAFYA_SECRET_KEY:?Définir ROHAFYA_SECRET_KEY}
+      ROHAFYA_JWT_SECRET_KEY: ${ROHAFYA_JWT_SECRET_KEY:?Définir ROHAFYA_JWT_SECRET_KEY}
+      ROHAFYA_PASSWORD_SALT: ${ROHAFYA_PASSWORD_SALT:?Définir ROHAFYA_PASSWORD_SALT}
+      ROHAFYA_MAIL_SERVER: ${ROHAFYA_MAIL_SERVER:-smtp.office365.com}
+      ROHAFYA_MAIL_PORT: ${ROHAFYA_MAIL_PORT:-587}
+      ROHAFYA_MAIL_USERNAME: ${ROHAFYA_MAIL_USERNAME:-eden.no-reply@pdmdsante.com}
+      ROHAFYA_MAIL_PASSWORD: ${ROHAFYA_MAIL_PASSWORD:-}
+      ROHAFYA_MAIL_DEFAULT_SENDER: ${ROHAFYA_MAIL_DEFAULT_SENDER:-"PDMD - EDEN" <eden.no-reply@pdmdsante.com>}
+      ROHAFYA_FRONT_URL: ${ROHAFYA_FRONT_URL:-https://rohafya.com}
+      ROHAFYA_FRONT_ORIGINS: ${ROHAFYA_FRONT_ORIGINS:-https://rohafya.com,https://preprod.rohafya.com}
+      ROHAFYA_PDF_IMPORT_ENABLED: ${ROHAFYA_PDF_IMPORT_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Un seul proxy de confiance devant l'API : Nginx Proxy Manager.
+      ROHAFYA_PROXIES: "1"
+      # Pas de lecture directe de GNU Health : les données arrivent par le connecteur.
+      ROHAFYA_GNUHEALTH: "false"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      TZ: ${TZ:-Africa/Douala}
+    volumes:
+      - fichiers:/app/files
+    networks:
+      - interne
+      - proxy
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMOIRE_MAX:-1g}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  db:
+    image: postgres:16-alpine
+    container_name: ${ROHAFYA_NOM:-rohafya}-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rohafya
+      POSTGRES_USER: rohafya
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Définir POSTGRES_PASSWORD}
+      TZ: ${TZ:-Africa/Douala}
+      PGTZ: ${TZ:-Africa/Douala}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rohafya -d rohafya"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 128mb
+    # Aucun port publié : la base n'est joignable que par l'API et les sauvegardes.
+    networks:
+      - interne
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  sauvegarde:
+    image: prodrigestivill/postgres-backup-local:16
+    container_name: ${ROHAFYA_NOM:-rohafya}-sauvegarde
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: rohafya
+      POSTGRES_USER: rohafya
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Définir POSTGRES_PASSWORD}
+      POSTGRES_EXTRA_OPTS: "--format=custom --compress=9"
+      SCHEDULE: ${SAUVEGARDE_PLANNING:-@daily}
+      BACKUP_KEEP_DAYS: ${SAUVEGARDE_JOURS:-7}
+      BACKUP_KEEP_WEEKS: ${SAUVEGARDE_SEMAINES:-4}
+      BACKUP_KEEP_MONTHS: ${SAUVEGARDE_MOIS:-6}
+      BACKUP_SUFFIX: ".dump"
+      TZ: ${TZ:-Africa/Douala}
+    volumes:
+      - sauvegardes:/backups
+    networks:
+      - interne
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  pgdata:
+  fichiers:
+  sauvegardes:
+
+networks:
+  # Réseau privé de la stack, sans accès à Internet (la base n'en a pas besoin).
+  interne:
+    internal: true
+  # Réseau de Nginx Proxy Manager, créé par sa propre stack (voir la documentation, § 6.2).
+  proxy:
+    external: true
+    name: ${NPM_NETWORK:-npm_default}

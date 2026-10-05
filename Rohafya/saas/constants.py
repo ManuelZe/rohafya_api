@@ -1,4 +1,5 @@
 """Constantes partagées par le module SaaS."""
+import os
 
 # Rôles (table `roles`). « Admin » est le rôle historique d'administration globale :
 # il est traité comme un super-administrateur.
@@ -16,6 +17,21 @@ SOURCE_API = "api"               # envoi par l'API ROHAFYA, au format des donné
 SOURCE_FHIR = "fhir"             # envoi au standard HL7 FHIR R4
 SOURCE_PDF = "pdf"               # dépôt de comptes rendus PDF (fichier ou scan) relus sur la plateforme
 SOURCES = (SOURCE_GNUHEALTH, SOURCE_API, SOURCE_FHIR, SOURCE_PDF)
+
+# Fronts autorisés (CORS) et vers lesquels pointent les QR codes et les e-mails.
+# Surchargeable par ROHAFYA_FRONT_ORIGINS (liste séparée par des virgules).
+DEFAULT_FRONT_ORIGINS = (
+    "https://rohafya.com",
+    "https://preprod.rohafya.com",
+    "http://localhost:4000",
+    "http://localhost:4200",
+)
+
+
+def front_origins():
+    raw = os.environ.get("ROHAFYA_FRONT_ORIGINS")
+    origins = raw.split(",") if raw else DEFAULT_FRONT_ORIGINS
+    return [origin.strip().rstrip("/") for origin in origins if origin.strip()]
 
 # Types de données reçues.
 KIND_LAB = "laboratoire"

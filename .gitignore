@@ -3,5 +3,15 @@ instance
 __pycache__
 Flask.tar.gz
 envDoc
+cert.pem
+key.pem
 
 
+
+# Identifiants en clair écrits par doctors/charge_doctors.py
+username_password.txt
+# Fichiers temporaires de vim
+*.swp
+# Secrets de déploiement
+.env
+deploy/stack.env
