@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from flask import jsonify, Flask, session, g, request, render_template_string
 import datetime
@@ -33,6 +34,21 @@ migrate = Migrate()
 login_manager = LoginManager()
 tryton = Tryton()
 jwt = JWTManager()
+
+
+class _FusionSlashs:
+    """« //patient/… » → « /patient/… » : une URL de base du front terminée par « / » produit des
+    chemins avec des « / » répétés, qui ne correspondent à aucune route (404, et échec du
+    pré-contrôle CORS)."""
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        chemin = environ.get("PATH_INFO", "")
+        if "//" in chemin:
+            environ["PATH_INFO"] = re.sub("/{2,}", "/", chemin)
+        return self.wsgi_app(environ, start_response)
 
 
 def create_app():
@@ -75,6 +91,7 @@ def create_app():
     proxies = int(os.environ.get('ROHAFYA_PROXIES', '0'))
     if proxies:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
+    app.wsgi_app = _FusionSlashs(app.wsgi_app)
 
     # Initialisation des extensions avec l'application Flask
     db.init_app(app)

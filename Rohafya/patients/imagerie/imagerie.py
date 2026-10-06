@@ -182,7 +182,7 @@ def all_results():
 
 
 # MORE INFORMATIONS ABOUT ONE RESULT
-@imagerie.route('/more_infos/<string:number>/result/', methods=['GET'])
+@imagerie.route('/more_infos/<path:number>/result/', methods=['GET'])
 @cross_origin(supports_credentials=True)
 @jwt_required()
 # @roles_required(['Admin','Patient'])

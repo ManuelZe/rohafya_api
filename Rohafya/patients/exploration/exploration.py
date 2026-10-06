@@ -181,7 +181,7 @@ def all_results():
     
 
 # MORE INFORMATIONS ABOUT ONE RESULT
-@exploration.route('/more_infos/<string:rec_name>/result/', methods=['GET'])
+@exploration.route('/more_infos/<path:rec_name>/result/', methods=['GET'])
 @cross_origin(supports_credentials=True)
 @jwt_required()
 # @roles_required(['Admin','Patient'])

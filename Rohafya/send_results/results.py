@@ -80,7 +80,7 @@ def _tryton_patient(patient_federation_id, patient):
     return tryton.pool.get("gnuhealth.patient").search([("name", "=", party[0].id)])
 
 
-@results.route('/<string:exam_type>/<string:exam_code>/<string:patient_federation_id>', methods=['GET'])
+@results.route('/<string:exam_type>/<path:exam_code>/<string:patient_federation_id>', methods=['GET'])
 @cross_origin(supports_credentials=True)
 @jwt_required()
 # @roles_required(['Admin', 'Doctor', 'Patient'])
@@ -222,7 +222,7 @@ def get_results(exam_type, exam_code, patient_federation_id):
     
     
 
-@results.route('/more_infos/<string:exam_type>/<string:exam_code>/<string:patient_federation_id>', methods=['GET'])
+@results.route('/more_infos/<string:exam_type>/<path:exam_code>/<string:patient_federation_id>', methods=['GET'])
 @cross_origin(supports_credentials=True)
 # @roles_required(['Admin', 'Doctor', 'Patient'])
 @jwt_required()

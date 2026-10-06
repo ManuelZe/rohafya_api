@@ -135,7 +135,7 @@ def all_results():
     
 
 # MORE INFORMATIONS ABOUT ONE RESULT
-@laboratoire.route('/more_infos/<string:rec_name>/result/', methods=['GET'])
+@laboratoire.route('/more_infos/<path:rec_name>/result/', methods=['GET'])
 @cross_origin(supports_credentials=True)
 @jwt_required()
 # @roles_required(['Admin','Patient'])

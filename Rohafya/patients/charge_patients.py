@@ -508,7 +508,7 @@ def all_invoices(patient_id=None):
     
 
 # LISTE DES PRODUITS / EXAMENS D'UNE FACTURE D'UN PATIENT
-@charges_patients.route('factures/products/<string:invoice_number>', methods=['GET'])
+@charges_patients.route('factures/products/<path:invoice_number>', methods=['GET'])
 @cross_origin(supports_credentials=True)
 @tryton.transaction()
 @jwt_required()
