@@ -115,4 +115,4 @@ networks:
   # Réseau de Nginx Proxy Manager, créé par sa propre stack (voir la documentation, § 6.2).
   proxy:
     external: true
-    name: ${NPM_NETWORK:-npm_default}
+    name: ${NPM_NETWORK:-reverse_proxy_proxyger_defaut}

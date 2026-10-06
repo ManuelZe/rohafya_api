@@ -33,7 +33,7 @@ class ConfigEnvClass(object):
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "eden.no-reply@pdmdsante.com")
     MAIL_PASSWORD = os.environ.get("ROHAFYA_MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"PDMD - EDEN" <eden.no-reply@pdmdsante.com>')
+    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"ROHAFYA" <eden.no-reply@pdmdsante.com>')
 
     # Flask-User settings
     USER_APP_NAME = "Doctors And Patients App"      # Shown in and email templates and page footers
