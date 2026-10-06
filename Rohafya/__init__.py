@@ -139,6 +139,9 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Prescriptions et pré-enregistrements de médecins : patient_id facultatif sur les bases existantes.
+        from .saas.submissions import relax_patient_columns
+        relax_patient_columns()
 
     # Enregistrement des blueprints
     from .accounts.users import userd
@@ -170,6 +173,7 @@ def create_app():
     from .saas.ingest_routes import ingest as saas_ingest, fhir as saas_fhir
     from .saas.cli import saas_cli
     from .saas.pdf_routes import pdf_imports
+    from .saas.submission_routes import submissions_admin
 
     app.register_blueprint(requete)
     app.register_blueprint(doctor_gnu)
@@ -200,6 +204,7 @@ def create_app():
     app.register_blueprint(saas_ingest)
     app.register_blueprint(saas_fhir)
     app.register_blueprint(pdf_imports)
+    app.register_blueprint(submissions_admin)
     app.cli.add_command(saas_cli)
 
     from .accounts.models import UserActivity

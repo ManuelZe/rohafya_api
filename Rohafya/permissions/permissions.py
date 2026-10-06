@@ -240,6 +240,21 @@ PERMISSIONS = {
             "get_requests_by_id" : "Voir les rêquetes d'un utilisateur",
             "rejet_request" : "Rejeter une rêquete",
         },
+        "prescriptions" : {
+            "all_prescriptions" : "Voir ses prescriptions envoyées aux établissements",
+            "add_prescriptions" : "Envoyer une prescription à un établissement",
+            "delete_prescription" : "Supprimer une de ses prescriptions",
+            "get_prescription" : "Voir une de ses prescriptions",
+            "get_devis_prescriptions" : "Voir ses prescriptions avec demande de devis",
+            "recuperer_image_prescription" : "Voir l'image d'une de ses prescriptions",
+        },
+        "saved_patients" : {
+            "all_saved_patients" : "Voir ses pré-enregistrements de patients",
+            "add_save_patients" : "Pré-enregistrer un patient auprès d'un établissement",
+            "delete_save_patient" : "Supprimer un de ses pré-enregistrements",
+            "get_image" : "Voir l'image d'un de ses pré-enregistrements",
+            "get_validated_save_patient" : "Voir un de ses pré-enregistrements",
+        },
         "blog" : {
             "all_article" : "Tous les articles",
             "get_article" : "Voir un article en particulier",

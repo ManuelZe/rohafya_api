@@ -17,6 +17,7 @@ from .services import (
     grant_default_permissions,
     sync_permissions,
 )
+from .submissions import attach_orphans, relax_patient_columns
 
 saas_cli = AppGroup("saas", help="Installation et administration du mode SaaS.")
 
@@ -27,6 +28,8 @@ def init(sans_permissions):
     """Crée les rôles, les permissions et l'établissement GNU Health historique (idempotent).
 
     Les rôles Patient et Doctor reçoivent les permissions patients.* et doctors.* qui leur manquent.
+    Les prescriptions, pré-enregistrements et requêtes créés avant l'adressage aux établissements
+    sont rattachés à l'établissement GNU Health historique (PDMD Santé).
     """
     db.create_all()
     get_or_create_role(ROLE_SUPER_ADMIN)
@@ -35,10 +38,17 @@ def init(sans_permissions):
     added = {} if sans_permissions else grant_default_permissions()
     db.session.commit()
     tenant = default_gnuhealth_tenant()
+    relax_patient_columns()
+    attached = attach_orphans(tenant)
     click.echo(f"Rôles {ROLE_SUPER_ADMIN} et {ROLE_TENANT_ADMIN} prêts.")
     click.echo(f"Permissions : {created} créée(s).")
     for role_name, count in added.items():
         click.echo(f"Rôle {role_name} : {count} permission(s) par défaut ajoutée(s).")
+    click.echo(
+        "Demandes antérieures adressées à {} : {} prescription(s), {} pré-enregistrement(s), {} requête(s).".format(
+            tenant.name, attached["prescription"], attached["pre_enregistrement"], attached["requete"]
+        )
+    )
     click.echo(f"Établissement GNU Health : {tenant.name} (id {tenant.id}, identifiant {tenant.slug}).")
 
 

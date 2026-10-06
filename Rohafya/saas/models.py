@@ -372,3 +372,51 @@ class PdfImport(db.Model):
         if full:
             data["extraction"] = extraction
         return data
+
+
+class Submission(db.Model):
+    """Adressage d'une prescription, d'un pré-enregistrement ou d'une requête à un établissement.
+
+    Le contenu reste dans sa table d'origine (prescriptions, save_patients, requests) ; cette table
+    porte l'établissement destinataire, l'auteur, le statut et la réponse de l'établissement.
+    """
+
+    __tablename__ = "saas_submissions"
+    __table_args__ = (db.UniqueConstraint("kind", "item_id", name="uq_saas_submission_item"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(30), nullable=False, index=True)
+    item_id = db.Column(db.Integer, nullable=False)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    author_role = db.Column(db.String(20), nullable=False, default="patient")
+    # Patient concerné, quand l'auteur est un médecin (prescription pour un patient).
+    patient_name = db.Column(db.String(200), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default="recue", index=True)
+    response = db.Column(db.Text, nullable=True)
+    quote_amount = db.Column(db.Float, nullable=True)
+    responded_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    responded_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now)
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    tenant = db.relationship("Tenant")
+    author = db.relationship("User", foreign_keys=[author_id])
+
+    def to_dict(self):
+        from .constants import SUBMISSION_STATUS_LABELS
+
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "tenant_id": self.tenant_id,
+            "establishment": self.tenant.display_name if self.tenant else None,
+            "author_role": self.author_role,
+            "patient_name": self.patient_name,
+            "status": self.status,
+            "status_label": SUBMISSION_STATUS_LABELS.get(self.status, self.status),
+            "response": self.response,
+            "quote_amount": self.quote_amount,
+            "responded_at": self.responded_at,
+            "created_at": self.created_at,
+        }

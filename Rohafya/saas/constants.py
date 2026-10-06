@@ -59,6 +59,36 @@ CODE_FIELD = {
     KIND_INVOICE: "reference",
 }
 
+# Demandes adressées à un établissement par un patient, un médecin ou un visiteur :
+# prescriptions, pré-enregistrements et requêtes (table saas_submissions).
+SUBMISSION_PRESCRIPTION = "prescription"
+SUBMISSION_PRE_REGISTRATION = "pre_enregistrement"
+SUBMISSION_REQUEST = "requete"
+SUBMISSION_KINDS = (SUBMISSION_PRESCRIPTION, SUBMISSION_PRE_REGISTRATION, SUBMISSION_REQUEST)
+SUBMISSION_KIND_LABELS = {
+    SUBMISSION_PRESCRIPTION: "prescription",
+    SUBMISSION_PRE_REGISTRATION: "pré-enregistrement",
+    SUBMISSION_REQUEST: "requête",
+}
+
+SUBMISSION_RECEIVED = "recue"
+SUBMISSION_IN_PROGRESS = "en_cours"
+SUBMISSION_DONE = "traitee"
+SUBMISSION_REFUSED = "refusee"
+SUBMISSION_STATUSES = (SUBMISSION_RECEIVED, SUBMISSION_IN_PROGRESS, SUBMISSION_DONE, SUBMISSION_REFUSED)
+SUBMISSION_STATUS_LABELS = {
+    SUBMISSION_RECEIVED: "Reçue",
+    SUBMISSION_IN_PROGRESS: "En cours",
+    SUBMISSION_DONE: "Traitée",
+    SUBMISSION_REFUSED: "Refusée",
+}
+
+# Auteur d'une demande.
+AUTHOR_PATIENT = "patient"
+AUTHOR_DOCTOR = "doctor"
+AUTHOR_ANONYMOUS = "anonyme"
+AUTHOR_ROLES = (AUTHOR_PATIENT, AUTHOR_DOCTOR, AUTHOR_ANONYMOUS)
+
 # Liens patient ↔ établissement.
 LINK_PENDING = "pending"
 LINK_ACTIVE = "active"

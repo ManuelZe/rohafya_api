@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nouvelle demande ROHAFYA</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f6fa; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fa; padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px; background:#ffffff; border-radius:12px; padding:32px 28px;">
+                    <tr>
+                        <td style="font-size:22px; font-weight:700; color:#047857; padding-bottom:16px;">ROHAFYA</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:16px; line-height:1.5; padding-bottom:16px;">
+                            Bonjour,<br><br>
+                            <strong>{{ author }}</strong> a envoyé une <strong>{{ kind_label }}</strong> à <strong>{{ establishment }}</strong>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:15px; line-height:1.5; padding-bottom:20px;">
+                            Consultez-la et répondez depuis la console de l'établissement, rubrique <strong>« Demandes »</strong>.
+                            L'auteur sera prévenu de votre réponse.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="padding-bottom:12px;">
+                            <a href="{{ front_url }}{{ admin_path }}" style="display:inline-block; background:#047857; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px;">Voir les demandes</a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

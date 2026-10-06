@@ -251,6 +251,20 @@ def delete_tenant(tenant_id):
             db.session.delete(row)
         db.session.flush()
 
+    # Prescriptions, pré-enregistrements et requêtes adressés à l'établissement : leur contenu part
+    # avec eux (sinon, sans adressage, flask saas init les attribuerait à PDMD Santé).
+    from .models import Submission
+    from .submissions import ITEM_MODELS
+
+    submissions = db.session.execute(select(Submission).filter_by(tenant_id=tenant.id)).scalars().all()
+    counts["demandes"] = len(submissions)
+    for submission in submissions:
+        item = db.session.get(ITEM_MODELS[submission.kind], submission.item_id)
+        if item is not None:
+            db.session.delete(item)
+        db.session.delete(submission)
+    db.session.flush()
+
     members = db.session.execute(select(TenantMember).filter_by(tenant_id=tenant.id)).scalars().all()
     counts["administrateurs"] = len(members)
     admin_role = db.session.execute(select(Role).filter_by(name=ROLE_TENANT_ADMIN)).scalar_one_or_none()

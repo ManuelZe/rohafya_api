@@ -36,6 +36,9 @@ jobs:
       - name: Tests de l'API (module SaaS)
         run: python Rohafya/tests/test_saas.py
 
+      - name: Tests de l'API (demandes aux établissements)
+        run: python Rohafya/tests/test_demandes.py
+
       - name: Tests du connecteur GNU Health
         run: python connecteur_gnuhealth/tests/test_connecteur.py
 

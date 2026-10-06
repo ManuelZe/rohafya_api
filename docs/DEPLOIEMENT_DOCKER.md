@@ -187,7 +187,7 @@ git push origin main
 
 Dans GitHub → **Actions** → « Image Docker de l'API », deux tâches s'enchaînent :
 
-1. **Tests** : `Rohafya/tests/test_saas.py` (99 vérifications) et `connecteur_gnuhealth/tests/test_connecteur.py` (39 vérifications). L'image n'est pas construite si un test échoue.
+1. **Tests** : `Rohafya/tests/test_saas.py` (99 vérifications), `Rohafya/tests/test_demandes.py` (47) et `connecteur_gnuhealth/tests/test_connecteur.py` (39). L'image n'est pas construite si un test échoue.
 2. **Image** : construction de l'image, puis publication sur `ghcr.io/manuelze/rohafya-api` avec les étiquettes `latest` et `sha-<commit>`.
 
 Le paquet apparaît dans GitHub → profil → **Packages** → `rohafya-api`, **privé** par défaut
@@ -333,9 +333,10 @@ flask saas create-superadmin admin@pdmdsante.com --first-name Prénom --last-nam
 ```
 
 `flask saas init` est idempotent, on peut le relancer sans risque. Il :
-- crée les rôles SaaS et les 212 permissions du catalogue (`Rohafya/permissions/permissions.py`) ;
+- crée les rôles SaaS et les permissions du catalogue (`Rohafya/permissions/permissions.py`) ;
 - **ajoute aux rôles Patient et Doctor les permissions `patients.*` et `doctors.*` qui leur manquent** ;
-- crée l'établissement GNU Health historique.
+- crée l'établissement GNU Health historique ;
+- rattache à cet établissement (PDMD Santé) les prescriptions, pré-enregistrements et requêtes envoyés avant l'adressage aux établissements.
 
 Sans ces permissions par défaut, un compte patient ou médecin reçoit `403 {"error":"Permission
 denied"}` sur toutes ses requêtes. La commande ne retire jamais de permission. En revanche, une
@@ -480,6 +481,12 @@ de 100 éléments.
 
 Seul le conteneur `rohafya-api` est recréé : la base et les volumes sont conservés. Pendant le
 redémarrage, l'API est indisponible quelques secondes.
+
+5. Après la mise à jour, lancer `docker exec rohafya-api flask saas init`. Les nouvelles
+   permissions sont alors attribuées aux rôles Patient et Doctor, et les données existantes
+   sont adaptées, par exemple le rattachement des anciennes demandes à PDMD Santé. Une adaptation
+   du schéma, comme `patient_id` facultatif depuis la version des demandes aux établissements, est
+   en plus appliquée d'elle-même au démarrage de l'API.
 
 **Retour arrière** : remettre l'ancienne valeur de `ROHAFYA_VERSION` (ou une étiquette
 `sha-…`), puis **Update the stack**. Une version qui a ajouté des tables ou colonnes les
@@ -640,7 +647,8 @@ Manager, et un Nginx de test pour simuler le proxy.
 | Vérification | Résultat |
 |---|---|
 | Construction de l'image | 248 Mo, Python 3.13, Pillow 12, Flask 3.1, gunicorn 23 |
-| Tests exécutés **dans l'image** | 99/99 (API) et 39/39 (connecteur) |
+| Tests exécutés **dans l'image** | 99/99 et 47/47 (API), 39/39 (connecteur) |
+| Demandes aux établissements sur **PostgreSQL** (`test_demandes`), dont l'adaptation du schéma d'une base existante au démarrage | ✅ |
 | Stack validée par Compose v2 (moteur de Portainer) | ✅, et refus explicite sans secrets |
 | Démarrage : attente de la base, création des tables une seule fois, 3 processus | ✅ *healthy* en environ 25 s |
 | Fuseau horaire `Africa/Douala` | ✅ (+0100 dans les journaux) |

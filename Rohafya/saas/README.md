@@ -7,8 +7,11 @@ ROHAFYA sert désormais plusieurs établissements (*tenants*). Un patient ou un 
 
 ## Mise en service (interventions manuelles)
 
-1. **Déployer le code** puis redémarrer l'API. Les nouvelles tables (`saas_*`) sont créées automatiquement par `db.create_all()` au démarrage. Aucune table existante n'est modifiée et aucune migration n'est nécessaire.
-2. **Initialiser** (idempotent) : crée les rôles `SuperAdmin` et `EstablishmentAdmin`, ainsi que l'établissement GNU Health « PDMD Santé ».
+1. **Déployer le code** puis redémarrer l'API. Les nouvelles tables (`saas_*`) sont créées automatiquement par `db.create_all()` au démarrage. Une seule modification de table existante, faite elle aussi au démarrage et seulement si nécessaire (PostgreSQL) : `patient_id` devient facultatif dans `prescriptions` et `save_patients`, pour les envois des médecins. Aucune autre migration n'est nécessaire.
+2. **Initialiser** (idempotent, à relancer après chaque mise à jour) :
+   - crée les rôles `SuperAdmin` et `EstablishmentAdmin`, l'établissement GNU Health « PDMD Santé » et les permissions du catalogue ;
+   - ajoute aux rôles `Patient` et `Doctor` leurs permissions `patients.*` et `doctors.*` manquantes (`--sans-permissions` pour l'éviter) ;
+   - rattache à PDMD Santé les prescriptions, pré-enregistrements et requêtes créés avant l'adressage aux établissements.
    ```bash
    flask --app Rohafya saas init
    ```
@@ -35,7 +38,11 @@ ROHAFYA sert désormais plusieurs établissements (*tenants*). Un patient ou un 
 | --- | --- | --- |
 | `SuperAdmin` (ou `Admin` historique) | `/super-admin` | Tous les établissements, leurs administrateurs, leurs clés d'API, tous les comptes, le journal global |
 | `EstablishmentAdmin` + appartenance (`saas_tenant_members`) | `/admin` | Uniquement ses établissements : patients, rattachements, QR codes, médecins, données reçues, réglages, journal |
-| `Patient` / `Doctor` | `/patients`, `/doctors` | Inchangés ; les résultats de tous les établissements rattachés sont agrégés |
+| `Patient` (permissions `patients.*`) | `/patients` | Les résultats de tous les établissements rattachés sont agrégés ; envoie prescriptions, pré-enregistrements et requêtes à l'établissement de son choix |
+| `Doctor` (permissions `doctors.*`) | `/doctors` | Résultats partagés ; envoie prescriptions (pour un patient), pré-enregistrements de patients et requêtes à l'établissement de son choix |
+| Visiteur sans compte | `/requests` | Requêtes seulement, e-mail obligatoire (la réponse y est envoyée) |
+
+Les permissions `patients.*` et `doctors.*` sont données aux rôles par `flask saas init`. Un administrateur d'établissement n'a besoin d'aucune permission : l'accès à `/saas/admin/tenants/<id>/…` dépend de son appartenance à l'établissement.
 
 ## Connexion par code e-mail
 
@@ -112,19 +119,51 @@ Méthode « Scan / PDF de résultats » (`source_type = "pdf"`), utilisable auss
 
 L'import PDF n'est pas proposé à l'établissement GNU Health (ses résultats sont lus directement dans Tryton).
 
+## Prescriptions, pré-enregistrements et requêtes adressés à un établissement
+
+Chaque envoi d'un patient, d'un médecin ou d'un visiteur est adressé à **un établissement actif**. Le contenu reste dans sa table d'origine (`prescriptions`, `save_patients`, `requests`) ; la table `saas_submissions` porte l'adressage : établissement, auteur (`patient`, `doctor`, `anonyme`), patient concerné (envoi d'un médecin), statut (`recue`, `en_cours`, `traitee`, `refusee`), réponse et montant du devis. Code : `saas/submissions.py`.
+
+**Envoi** (champs ajoutés aux routes existantes) :
+
+| Route | Nouveaux champs |
+| --- | --- |
+| `POST /prescription/add/` (multipart) | `tenant_id` (obligatoire), `audience` (`patient` ou `doctor`), `patient_name` (obligatoire pour un médecin ; nom et numéro d'ordre repris de son profil) |
+| `POST /save_patient/add/` (multipart) | `tenant_id`, `audience` ; l'image est obligatoire |
+| `POST /requete/add` (JSON, avec ou sans jeton) et `POST /requete/anonym/add` | `tenant_id`, `audience` ; sans compte, `email` obligatoire |
+| `GET /saas/public/establishments` | liste publique des établissements actifs, pour les formulaires |
+
+**Lecture** : `GET /prescription/all_prescriptions/?audience=…`, `GET /save_patient/all_save_patients/?audience=…` et `GET /requete/get_requests/<moi>?audience=…` renvoient les seuls envois de l'utilisateur depuis cet espace. Chaque élément porte une clé `submission` (`null` pour un élément antérieur non encore rattaché). Lecture, image et suppression sont réservées à l'auteur, à l'établissement destinataire et aux anciens administrateurs globaux (permissions `administration.*`, qui gardent la vue d'ensemble sans `audience`).
+
+**Console de l'établissement** (administrateurs de l'établissement et super-administrateur) :
+
+- `GET /saas/admin/tenants/<id>/submissions?kind=&status=&q=&page=&page_size=` : liste paginée, avec les compteurs par type et statut ;
+- `GET /saas/admin/tenants/<id>/submissions/<sid>/image` : pièce jointe ;
+- `PUT /saas/admin/tenants/<id>/submissions/<sid>` `{status, response, quote_amount}` : réponse.
+
+**Notifications** :
+
+- chaque envoi prévient les administrateurs de l'établissement (notification et e-mail `emails/nouvelle_demande.html`). Sans administrateur, l'e-mail part à l'« e-mail de contact » de l'établissement, sinon aux super-administrateurs ;
+- chaque réponse prévient l'auteur (notification et e-mail `emails/reponse_demande.html`) ;
+- les anciens champs restent cohérents : `requests.valide` / `rejected`, `save_patients.validated`.
+
 ## Suppression d'un établissement
 
-`DELETE /saas/super/tenants/<id>` avec `{"confirm_slug": "<identifiant>"}` (super-administrateur). Efface ses données reçues, imports PDF, rattachements, QR codes et administrateurs ; les comptes ROHAFYA des patients et médecins sont conservés, le journal est gardé (marqué `etablissement_supprime`). Refusé pour l'établissement GNU Health, qui peut seulement être suspendu.
+`DELETE /saas/super/tenants/<id>` avec `{"confirm_slug": "<identifiant>"}` (super-administrateur). Efface ses données reçues, imports PDF, demandes reçues (adressage et contenu), rattachements, QR codes et administrateurs ; les comptes ROHAFYA des patients et médecins sont conservés, le journal est gardé (marqué `etablissement_supprime`). Refusé pour l'établissement GNU Health, qui peut seulement être suspendu.
 
 ## Ce que voient les utilisateurs
 
 - **Patient** : ses résultats et factures, tous établissements confondus, chacun portant le nom de son établissement. Les règles de chaque établissement s'appliquent : durée d'accès aux détails, blocage si une facture est impayée. L'écran « Mes établissements » permet d'ajouter ou de retirer un établissement.
 - **Médecin** : les résultats partagés par ses patients, quel que soit l'établissement. Le module commissions n'apparaît que si un établissement GNU Health l'active.
+- **Patient et médecin** : chaque prescription, pré-enregistrement ou requête affiche son établissement, son statut et la réponse reçue (montant du devis en FCFA).
+- **Administrateur d'établissement** : page « Demandes » (`/admin/demandes`), pour répondre.
 
 ## Tests
 
 ```bash
 Rohafya/envDoc/bin/python Rohafya/tests/test_saas.py
+Rohafya/envDoc/bin/python Rohafya/tests/test_demandes.py
 ```
+
+`test_demandes.py` couvre les envois des patients, des médecins et des visiteurs, le cloisonnement entre établissements, les réponses et notifications, la reprise des envois antérieurs par `flask saas init` et la suppression d'un établissement.
 
 Ce test de bout en bout tourne sur SQLite en mémoire et couvre : connexion par code, création d'établissement, envoi API et FHIR, QR code, rattachement, cloisonnement entre établissements et droits, imports PDF et quota (si `pdfplumber` est installé), suppression d'un établissement.

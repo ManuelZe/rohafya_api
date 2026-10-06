@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Réponse de {{ establishment }}</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f6fa; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fa; padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px; background:#ffffff; border-radius:12px; padding:32px 28px;">
+                    <tr>
+                        <td style="font-size:22px; font-weight:700; color:#047857; padding-bottom:16px;">ROHAFYA</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:16px; line-height:1.5; padding-bottom:16px;">
+                            Bonjour,<br><br>
+                            {{ message }}
+                        </td>
+                    </tr>
+                    {% if response %}
+                    <tr>
+                        <td style="font-size:15px; line-height:1.5; padding:14px 16px; background:#ecfdf5; border-left:4px solid #047857; border-radius:6px;">
+                            <strong>Réponse de {{ establishment }}&nbsp;:</strong><br>
+                            {% for ligne in response.split("\n") %}{{ ligne }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if quote_amount is not none %}
+                    <tr>
+                        <td style="font-size:16px; line-height:1.5; padding-top:16px;">
+                            Montant du devis&nbsp;: <strong>{{ "{:,.0f}".format(quote_amount).replace(",", " ") }} FCFA</strong>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if has_account %}
+                    <tr>
+                        <td align="center" style="padding-top:24px; padding-bottom:12px;">
+                            <a href="{{ front_url }}/connexion" style="display:inline-block; background:#047857; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px;">Ouvrir ROHAFYA</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

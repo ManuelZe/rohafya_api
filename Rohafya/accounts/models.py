@@ -558,8 +558,8 @@ class Prescriptions(db.Model):
     Demande_devis = db.Column(db.Boolean, default=False)
     Description = db.Column(db.String(500), nullable=True, default='')
 
-    # Clé étrangère vers Patient
-    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='CASCADE'), nullable=False)
+    # Clé étrangère vers Patient. Vide pour une prescription envoyée par un médecin (patient dans saas_submissions).
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='CASCADE'), nullable=True)
 
     # Relation Many-to-One : une prescription appartient à un patient
     patient = db.relationship('Patients', back_populates='prescriptions')
@@ -643,10 +643,10 @@ class SavePatients(db.Model):
     nom = db.Column(db.String(100), nullable=True)
     prenom = db.Column(db.String(100), nullable=True)
     description = db.Column(db.String(500), nullable=True)
-    # Clé étrangère vers Patient
-    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='CASCADE'), nullable=False)
+    # Clé étrangère vers Patient. Vide pour un pré-enregistrement fait par un médecin.
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id', ondelete='CASCADE'), nullable=True)
 
-    # Relation Many-to-One : une prescription appartient à un patient
+    # Relation Many-to-One : un pré-enregistrement appartient à un patient
     patient = db.relationship('Patients', back_populates='save_patients')
 
     image_data = db.Column(db.LargeBinary, nullable=True)
