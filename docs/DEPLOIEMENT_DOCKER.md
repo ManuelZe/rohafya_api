@@ -187,7 +187,7 @@ git push origin main
 
 Dans GitHub → **Actions** → « Image Docker de l'API », deux tâches s'enchaînent :
 
-1. **Tests** : `Rohafya/tests/test_saas.py` (91 vérifications) et `connecteur_gnuhealth/tests/test_connecteur.py` (39 vérifications). L'image n'est pas construite si un test échoue.
+1. **Tests** : `Rohafya/tests/test_saas.py` (99 vérifications) et `connecteur_gnuhealth/tests/test_connecteur.py` (39 vérifications). L'image n'est pas construite si un test échoue.
 2. **Image** : construction de l'image, puis publication sur `ghcr.io/manuelze/rohafya-api` avec les étiquettes `latest` et `sha-<commit>`.
 
 Le paquet apparaît dans GitHub → profil → **Packages** → `rohafya-api`, **privé** par défaut
@@ -328,10 +328,19 @@ Les commandes se lancent soit dans Portainer, soit en SSH :
 ### 8.A Nouvelle installation (base vide)
 
 ```sh
-flask saas init                                   # rôles SaaS + établissement GNU Health historique
-python -m Rohafya.permissions.__init__permission  # charge les 212 permissions
+flask saas init
 flask saas create-superadmin admin@pdmdsante.com --first-name Prénom --last-name Nom
 ```
+
+`flask saas init` est idempotent, on peut le relancer sans risque. Il :
+- crée les rôles SaaS et les 212 permissions du catalogue (`Rohafya/permissions/permissions.py`) ;
+- **ajoute aux rôles Patient et Doctor les permissions `patients.*` et `doctors.*` qui leur manquent** ;
+- crée l'établissement GNU Health historique.
+
+Sans ces permissions par défaut, un compte patient ou médecin reçoit `403 {"error":"Permission
+denied"}` sur toutes ses requêtes. La commande ne retire jamais de permission. En revanche, une
+permission de la famille retirée à la main est rajoutée : pour l'éviter, utiliser
+`flask saas init --sans-permissions`.
 
 Le super-administrateur se connecte ensuite avec « Code par e-mail » sur le front.
 
@@ -371,7 +380,6 @@ docker start rohafya-api
 
 ```sh
 docker exec rohafya-api flask saas init
-docker exec rohafya-api python -m Rohafya.permissions.__init__permission
 docker exec rohafya-db psql -U rohafya -d rohafya -tAc \
   "select count(*) from users; select count(*) from patients; select count(*) from doctors;"
 ```
@@ -488,8 +496,8 @@ laisse en place ; l'ancienne version les ignore.
 | Besoin | Commande (console du conteneur `rohafya-api`) |
 |---|---|
 | Créer ou promouvoir un super-administrateur | `flask saas create-superadmin email@domaine --first-name … --last-name …` |
-| Recharger les permissions après une évolution | `python -m Rohafya.permissions.__init__permission` |
-| Rôles SaaS et établissement GNU Health (idempotent) | `flask saas init` |
+| Rôles, permissions (nouvelles et par défaut des rôles Patient / Doctor), établissement GNU Health (idempotent) | `flask saas init` |
+| Idem, sans toucher aux permissions des rôles | `flask saas init --sans-permissions` |
 | Shell PostgreSQL | `docker exec -it rohafya-db psql -U rohafya -d rohafya` (SSH) |
 
 ### 11.4 Sauvegardes
@@ -607,6 +615,7 @@ exposée sur Internet. Ils ont été constatés lors des tests.
 | Échec du téléchargement de l'image : `denied` / `unauthorized` | Registre ghcr.io absent de Portainer, ou jeton expiré | Vérifier **Registries** et le jeton `read:packages` ([§ 6.1](#61-accès-à-limage-privée-ghcrio)) |
 | Échec du téléchargement de l'image : `manifest unknown` | Étiquette `ROHAFYA_VERSION` inexistante, ou workflow encore en cours | Vérifier les étiquettes publiées dans GitHub → Packages |
 | `network npm_default declared as external, but could not be found` | Mauvais nom de réseau | Relever le bon nom ([§ 6.2](#62-repérer-le-réseau-de-nginx-proxy-manager)) |
+| Compte patient ou médecin : `403 {"error":"Permission denied"}` sur toutes les requêtes | Rôle Patient ou Doctor sans permissions (base neuve, ou rôle créé à la première inscription) | `flask saas init` ([§ 8.A](#8a-nouvelle-installation-base-vide)). Pas de redémarrage nécessaire |
 | L'API redémarre en boucle avec `Variables d'environnement manquantes : …` | Secret absent | Compléter les variables de la stack |
 | L'API redémarre en boucle avec `Base de données injoignable après 60 secondes` | `rohafya-db` arrêtée, ou mot de passe incohérent après un changement | Journaux de `rohafya-db`, puis [§ 11.7](#117-changer-un-secret) |
 | `password authentication failed for user "rohafya"` | `POSTGRES_PASSWORD` modifié après la création du volume | `ALTER USER` ([§ 11.7](#117-changer-un-secret)) ou valeur d'origine |
@@ -630,7 +639,7 @@ Manager, et un Nginx de test pour simuler le proxy.
 | Vérification | Résultat |
 |---|---|
 | Construction de l'image | 248 Mo, Python 3.13, Pillow 12, Flask 3.1, gunicorn 23 |
-| Tests exécutés **dans l'image** | 91/91 (API) et 39/39 (connecteur) |
+| Tests exécutés **dans l'image** | 99/99 (API) et 39/39 (connecteur) |
 | Stack validée par Compose v2 (moteur de Portainer) | ✅, et refus explicite sans secrets |
 | Démarrage : attente de la base, création des tables une seule fois, 3 processus | ✅ *healthy* en environ 25 s |
 | Fuseau horaire `Africa/Douala` | ✅ (+0100 dans les journaux) |
@@ -638,7 +647,7 @@ Manager, et un Nginx de test pour simuler le proxy.
 | IP réelle du client dans les journaux (`X-Forwarded-For`) | ✅ |
 | CORS : origine autorisée / route sans décorateur | ✅ / ✅ (origine inconnue refusée) |
 | CORS : routes avec `@cross_origin` | ⚠️ origine inconnue acceptée ([§ 12.3](#123-points-à-corriger-dans-le-code)) |
-| `flask saas init`, `create-superadmin`, chargement des 212 permissions | ✅ |
+| `flask saas init` (212 permissions, permissions par défaut Patient / Doctor), `create-superadmin` | ✅ |
 | Routes qui lisaient GNU Health (laboratoire, imagerie, exploration, factures, devis, commissions) en mode désactivé | ✅ réponses vides, aucune erreur |
 | Sauvegarde manuelle (`/backup.sh`) | ✅ fichier `.dump` produit |
 | Restauration d'une sauvegarde (`--clean`) | ✅ données remises dans l'état sauvegardé |

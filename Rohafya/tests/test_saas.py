@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from flask import Flask
 from flask_jwt_extended import create_access_token
-from sqlalchemy import JSON, null
+from sqlalchemy import JSON, null, select
 
 import Rohafya
 from Rohafya import db, jwt, login_manager
@@ -369,5 +369,47 @@ with app.app_context():
     check("EstablishmentAdmin" not in services.role_names(db.session.get(User, tenant_admin_user.id)), "rôle d'administrateur retiré")
     journal = client.get("/saas/super/audit", headers=auth(admin)).get_json()["items"]
     check(journal[0]["action"] == "tenant.deleted", "suppression inscrite au journal")
+
+    print("15. flask saas init : permissions par défaut des rôles Patient et Doctor")
+    from Rohafya.accounts.models import Permissions, Role  # noqa: E402
+    from Rohafya.permissions.permissions import PERMISSIONS  # noqa: E402
+    from Rohafya.saas.cli import saas_cli  # noqa: E402
+
+    def codes(tree, parent=""):
+        for key, value in tree.items():
+            code = f"{parent}.{key}" if parent else key
+            yield from codes(value, code) if isinstance(value, dict) else [code]
+
+    catalogue = list(codes(PERMISSIONS))
+    nb_patients = sum(code.startswith("patients.") for code in catalogue)
+    nb_doctors = sum(code.startswith("doctors.") for code in catalogue)
+    app.cli.add_command(saas_cli)
+    runner = app.test_cli_runner()
+    lab = "patients.patients_laboratoire.all_results"
+    check(not db.session.get(User, patient_user.id).has_permission(lab), "avant : rôle Patient sans permission (403 partout)")
+    sortie = runner.invoke(args=["saas", "init"]).output
+    db.session.expire_all()
+    patient_role = db.session.execute(select(Role).filter_by(name="Patient")).scalar_one()
+    doctor_role = db.session.execute(select(Role).filter_by(name="Doctor")).scalar_one()
+    check(f"Permissions : {len(catalogue)} créée(s)." in sortie, "catalogue des permissions créé en base")
+    check(len(patient_role.permissions) == nb_patients and len(doctor_role.permissions) == nb_doctors,
+          "Patient reçoit patients.*, Doctor reçoit doctors.*")
+    check(all(p.code.startswith("patients.") for p in patient_role.permissions), "aucune permission d'administration donnée aux patients")
+    check(db.session.get(User, patient_user.id).has_permission(lab), "après : le patient a accès à ses résultats")
+    sortie = runner.invoke(args=["saas", "init"]).output
+    check("0 créée(s)" in sortie and "Rôle Patient : 0 permission(s)" in sortie, "relancer init ne change rien (idempotent)")
+    extra = db.session.execute(select(Permissions).filter(Permissions.code.startswith("administration."))).scalars().first()
+    retiree = next(p for p in patient_role.permissions if p.code == lab)
+    patient_role.permissions.append(extra)
+    patient_role.permissions.remove(retiree)
+    db.session.commit()
+    runner.invoke(args=["saas", "init", "--sans-permissions"])
+    db.session.expire_all()
+    codes_patient = {p.code for p in db.session.execute(select(Role).filter_by(name="Patient")).scalar_one().permissions}
+    check(extra.code in codes_patient and lab not in codes_patient, "--sans-permissions : réglages manuels intacts")
+    runner.invoke(args=["saas", "init"])
+    db.session.expire_all()
+    codes_patient = {p.code for p in db.session.execute(select(Role).filter_by(name="Patient")).scalar_one().permissions}
+    check(extra.code in codes_patient and lab in codes_patient, "init : permission manquante rajoutée, ajout manuel conservé")
 
 print(f"\n{ok_count} vérifications réussies.")

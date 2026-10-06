@@ -9,6 +9,10 @@ ROLE_TENANT_ADMIN = "EstablishmentAdmin"
 ROLE_PATIENT = "Patient"
 ROLE_DOCTOR = "Doctor"
 
+# Permissions attribuées par défaut (flask saas init) : chaque rôle reçoit toutes les permissions de sa famille.
+# Sans elles, un compte patient ou médecin reçoit « Permission denied » sur toutes ses requêtes.
+DEFAULT_ROLE_PERMISSION_PREFIXES = {ROLE_PATIENT: "patients.", ROLE_DOCTOR: "doctors."}
+
 SUPER_ADMIN_ROLES = {ROLE_SUPER_ADMIN, ROLE_LEGACY_ADMIN}
 
 # Origine des données d'un établissement.

@@ -8,20 +8,37 @@ from flask.cli import AppGroup
 
 from Rohafya import db
 from .constants import ROLE_SUPER_ADMIN, ROLE_TENANT_ADMIN
-from .services import active_users_by_email, add_role, create_user, default_gnuhealth_tenant, get_or_create_role
+from .services import (
+    active_users_by_email,
+    add_role,
+    create_user,
+    default_gnuhealth_tenant,
+    get_or_create_role,
+    grant_default_permissions,
+    sync_permissions,
+)
 
 saas_cli = AppGroup("saas", help="Installation et administration du mode SaaS.")
 
 
 @saas_cli.command("init")
-def init():
-    """Crée les rôles SaaS et l'établissement GNU Health historique (idempotent)."""
+@click.option("--sans-permissions", is_flag=True, help="Ne pas toucher aux permissions des rôles Patient et Doctor.")
+def init(sans_permissions):
+    """Crée les rôles, les permissions et l'établissement GNU Health historique (idempotent).
+
+    Les rôles Patient et Doctor reçoivent les permissions patients.* et doctors.* qui leur manquent.
+    """
     db.create_all()
     get_or_create_role(ROLE_SUPER_ADMIN)
     get_or_create_role(ROLE_TENANT_ADMIN)
+    created = sync_permissions()
+    added = {} if sans_permissions else grant_default_permissions()
     db.session.commit()
     tenant = default_gnuhealth_tenant()
     click.echo(f"Rôles {ROLE_SUPER_ADMIN} et {ROLE_TENANT_ADMIN} prêts.")
+    click.echo(f"Permissions : {created} créée(s).")
+    for role_name, count in added.items():
+        click.echo(f"Rôle {role_name} : {count} permission(s) par défaut ajoutée(s).")
     click.echo(f"Établissement GNU Health : {tenant.name} (id {tenant.id}, identifiant {tenant.slug}).")
 
 

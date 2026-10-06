@@ -18,6 +18,7 @@ from Rohafya.accounts.models import (
     Notifications,
     Notifications_Type,
     Patients,
+    Permissions,
     Role,
     User,
 )
@@ -146,6 +147,50 @@ def get_or_create_role(name):
     db.session.add(role)
     db.session.flush()
     return role
+
+
+def sync_permissions():
+    """Crée les permissions du catalogue (permissions/permissions.py) absentes de la base. Renvoie leur nombre."""
+    from Rohafya.permissions.permissions import PERMISSIONS
+
+    def codes(tree, parent=""):
+        for key, value in tree.items():
+            code = f"{parent}.{key}" if parent else key
+            if isinstance(value, dict):
+                yield from codes(value, code)
+            else:
+                yield code, value
+
+    existing = set(db.session.execute(select(Permissions.code)).scalars())
+    created = 0
+    for code, description in codes(PERMISSIONS):
+        if code not in existing:
+            db.session.add(Permissions(code=code, description=description))
+            created += 1
+    db.session.flush()
+    return created
+
+
+def grant_default_permissions():
+    """Ajoute aux rôles Patient et Doctor les permissions de leur famille qui leur manquent.
+
+    N'enlève jamais rien : les réglages faits à la main sont conservés, mais une permission de la
+    famille retirée volontairement est rajoutée. Renvoie {rôle: nombre de permissions ajoutées}.
+    """
+    from .constants import DEFAULT_ROLE_PERMISSION_PREFIXES
+
+    added = {}
+    for role_name, prefix in DEFAULT_ROLE_PERMISSION_PREFIXES.items():
+        role = get_or_create_role(role_name)
+        missing = [
+            permission
+            for permission in db.session.execute(select(Permissions).filter(Permissions.code.startswith(prefix))).scalars()
+            if permission not in role.permissions
+        ]
+        role.permissions.extend(missing)
+        added[role_name] = len(missing)
+    db.session.flush()
+    return added
 
 
 def add_role(user, name):
