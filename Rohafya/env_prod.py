@@ -28,20 +28,29 @@ class ConfigProdClass(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = True    # Avoids SQLAlchemy warning
 
     # Flask-Mail SMTP server settings
-    MAIL_SERVER = os.environ.get("ROHAFYA_MAIL_SERVER", "smtp.office365.com")
+    # MAIL_SERVER = os.environ.get("ROHAFYA_MAIL_SERVER", "smtp.office365.com")
+    # MAIL_PORT = int(os.environ.get("ROHAFYA_MAIL_PORT", "587"))
+    # MAIL_USE_SSL = False
+    # MAIL_USE_TLS = True
+    # MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "eden.no-reply@pdmdsante.com")
+    # MAIL_PASSWORD = os.environ.get("ROHAFYA_MAIL_PASSWORD")
+    # MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"PDMD - EDEN" <eden.no-reply@pdmdsante.com>')
+
+    # UTILISATION DE BREVO EN ATTANDANT D'AVOIR SON SERVEUR MAIL PERSONNALISÉ
+    MAIL_SERVER = os.environ.get("ROHAFYA_MAIL_SERVER", "smtp-relay.brevo.com")
     MAIL_PORT = int(os.environ.get("ROHAFYA_MAIL_PORT", "587"))
     MAIL_USE_SSL = False
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "eden.no-reply@pdmdsante.com")
+    MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "bbf22b001@smtp-brevo.com")
     MAIL_PASSWORD = os.environ.get("ROHAFYA_MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"PDMD - EDEN" <eden.no-reply@pdmdsante.com>')
+    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"ROHAFYA" <eden.no-reply@rohafya.com>')
 
     # Flask-User settings
-    USER_APP_NAME = "Doctors And Patients App"      # Shown in and email templates and page footers
+    USER_APP_NAME = "ROHAFYA"      # Shown in and email templates and page footers
     USER_ENABLE_EMAIL = True        # Enable email authentication
     USER_ENABLE_USERNAME = True    # Disable username authentication
     USER_EMAIL_SENDER_NAME = USER_APP_NAME
-    USER_EMAIL_SENDER_EMAIL = "verified@pdmdsante.com"
+    USER_EMAIL_SENDER_EMAIL = "eden.no-reply@rohafya.com"
     SECURITY_PASSWORD_SALT = os.environ.get("ROHAFYA_PASSWORD_SALT")
     USER_LOGIN_URL = '/user/login'
     USER_LOGOUT_URL = '/user/logout'
