@@ -43,7 +43,7 @@ class ConfigEnvClass(object):
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get("ROHAFYA_MAIL_USERNAME", "bbf22b001@smtp-brevo.com")
     MAIL_PASSWORD = os.environ.get("ROHAFYA_MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"ROHAFYA" <eden.no-reply@rohafya.com>')
+    MAIL_DEFAULT_SENDER = os.environ.get("ROHAFYA_MAIL_DEFAULT_SENDER", '"ROHAFYA" <no-reply@rohafya.com>')
 
 
 
@@ -52,7 +52,7 @@ class ConfigEnvClass(object):
     USER_ENABLE_EMAIL = True        # Enable email authentication
     USER_ENABLE_USERNAME = True    # Disable username authentication
     USER_EMAIL_SENDER_NAME = USER_APP_NAME
-    USER_EMAIL_SENDER_EMAIL = "eden.no-reply@rohafya.com"
+    USER_EMAIL_SENDER_EMAIL = "no-reply@rohafya.com"
     SECURITY_PASSWORD_SALT = os.environ.get("ROHAFYA_PASSWORD_SALT")
     USER_LOGIN_URL = '/user/login'
     USER_LOGOUT_URL = '/user/logout'
