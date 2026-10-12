@@ -34,6 +34,8 @@ from .services import (
     now,
     send_mail,
 )
+from .rights import admin_rights_view, rights_summaries, update_rights
+from . import notifications as notif
 from .tenant_admin_routes import tenant_stats
 
 super_admin = Blueprint("super_admin", __name__, url_prefix="/saas/super")
@@ -377,7 +379,7 @@ def remove_admin(tenant_id, user_id):
 # Comptes utilisateurs
 # =====================================================================
 
-def _user_view(user, memberships):
+def _user_view(user, memberships, rights=None):
     roles = sorted(role.name for role in user.roles)
     return {
         "id": user.id,
@@ -391,6 +393,7 @@ def _user_view(user, memberships):
         "admin_of": memberships.get(user.id, []),
         "patient_id": user.patients.id if user.patients else None,
         "doctor_id": user.doctor.id if user.doctor else None,
+        "rights": (rights or {}).get(user.id, []),
     }
 
 
@@ -424,7 +427,8 @@ def list_users():
         ).all()
         for user_id, name in rows:
             memberships.setdefault(user_id, []).append(name)
-    return jsonify({"items": [_user_view(user, memberships) for user in users], "total": total, "page": page, "page_size": size})
+    rights = rights_summaries([u.id for u in users])
+    return jsonify({"items": [_user_view(user, memberships, rights) for user in users], "total": total, "page": page, "page_size": size})
 
 
 @super_admin.route("/users/<int:user_id>/active", methods=["PUT"])
@@ -439,7 +443,7 @@ def set_user_active(user_id):
     user.active = bool(_json().get("active"))
     audit("user.activated" if user.active else "user.deactivated", user_id=current_user.id, target=user.email, commit=False)
     db.session.commit()
-    return jsonify(_user_view(user, {}))
+    return jsonify(_user_view(user, {}, rights_summaries([user.id])))
 
 
 @super_admin.route("/users/<int:user_id>/super-admin", methods=["PUT"])
@@ -460,7 +464,77 @@ def set_super_admin(user_id):
             user.roles.remove(role)
     audit("user.super_admin_granted" if enabled else "user.super_admin_revoked", user_id=current_user.id, target=user.email, commit=False)
     db.session.commit()
-    return jsonify(_user_view(user, {}))
+    return jsonify(_user_view(user, {}, rights_summaries([user.id])))
+
+
+# =====================================================================
+# Droits des comptes personnels (impression, partage des résultats)
+# =====================================================================
+
+@super_admin.route("/users/<int:user_id>/rights", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def get_user_rights(user_id):
+    if not db.session.get(User, user_id):
+        raise SaasError("Utilisateur introuvable.", 404)
+    return jsonify(admin_rights_view(user_id))
+
+
+@super_admin.route("/users/<int:user_id>/rights", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def put_user_rights(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        raise SaasError("Utilisateur introuvable.", 404)
+    data = _json()
+    update_rights(user_id, data, current_user.id)
+    audit("user.rights_updated", user_id=current_user.id, target=user.email, details={k: data[k] for k in data if k in ("print_mode", "print_from", "print_until", "share_limit", "reset_share_count")}, commit=False)
+    db.session.commit()
+    return jsonify(admin_rights_view(user_id))
+
+
+@super_admin.route("/users/<int:user_id>/rights", methods=["DELETE"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def delete_user_rights(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        raise SaasError("Utilisateur introuvable.", 404)
+    update_rights(user_id, {"print_mode": None, "share_limit": None}, current_user.id)
+    audit("user.rights_cleared", user_id=current_user.id, target=user.email, commit=False)
+    db.session.commit()
+    return jsonify(admin_rights_view(user_id))
+
+
+# =====================================================================
+# Notifications aux administrateurs, patients et médecins d'un établissement
+# =====================================================================
+
+@super_admin.route("/notifications", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def list_notifications():
+    page, size = _page()
+    tenant_id = request.args.get("tenant_id", type=int)
+    return jsonify(notif.campaigns_page(tenant_id, page, size))
+
+
+@super_admin.route("/tenants/<int:tenant_id>/notifications", methods=["POST"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def send_notification(tenant_id):
+    tenant = _tenant(tenant_id)
+    campaign = notif.send_campaign(tenant, _json(), current_user, "super_admin", notif.AUDIENCES)
+    return jsonify(campaign.to_dict()), 201
+
+
+@super_admin.route("/tenants/<int:tenant_id>/notification-recipients", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def notification_recipients(tenant_id):
+    tenant = _tenant(tenant_id)
+    return jsonify(notif.recipient_options(tenant, request.args.get("audience") or "admins", request.args.get("q", "")))
 
 
 # =====================================================================

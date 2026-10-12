@@ -142,6 +142,9 @@ def create_app():
         # Prescriptions et pré-enregistrements de médecins : patient_id facultatif sur les bases existantes.
         from .saas.submissions import relax_patient_columns
         relax_patient_columns()
+        # Notifications : message en texte long (VARCHAR(255) sur les bases existantes).
+        from .saas.notifications import widen_message_column
+        widen_message_column()
 
     # Enregistrement des blueprints
     from .accounts.users import userd

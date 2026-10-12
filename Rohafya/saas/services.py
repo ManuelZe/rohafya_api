@@ -371,7 +371,10 @@ def serialize_record(record, tenant, patient):
         # Comme GNU Health : message si l'accès est bloqué par une facture impayée.
         blocked = tenant.setting("block_unpaid_results") and has_unpaid_invoices(tenant.id, record.local_ref)
         data["error"] = UNPAID_MESSAGE if blocked else None
-    if record.kind != KIND_INVOICE:
+    if record.kind == KIND_INVOICE:
+        # Identifiant à passer à /patient/factures/products/<…> (le numéro affiché peut différer, ex. FAC/2026/5002).
+        data["details_ref"] = record.code
+    else:
         expiration = result_expiration(tenant, record.validated_at)
         days = int(tenant.setting("result_access_days") or 90)
         data["validation_date"] = record.validated_at or data.get("validation_date")
@@ -393,12 +396,23 @@ def patient_records(patient, kind):
 
 
 def find_patient_record(patient, kind, code):
-    for tenant, local_ref in external_sources(patient):
+    sources = external_sources(patient)
+    for tenant, local_ref in sources:
         record = db.session.execute(
             select(TenantRecord).filter_by(tenant_id=tenant.id, local_ref=local_ref, kind=kind, code=code)
         ).scalar_one_or_none()
         if record:
             return record, tenant
+    if kind == KIND_INVOICE:
+        # Une facture peut aussi être demandée par son numéro affiché (invoice_number) plutôt que par sa référence.
+        for tenant, local_ref in sources:
+            records = db.session.execute(
+                select(TenantRecord).filter_by(tenant_id=tenant.id, local_ref=local_ref, kind=kind)
+            ).scalars().all()
+            for record in records:
+                payload = record.payload or {}
+                if code in (payload.get("invoice_number"), payload.get("number")):
+                    return record, tenant
     return None, None
 
 

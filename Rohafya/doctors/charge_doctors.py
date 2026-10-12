@@ -13,6 +13,8 @@ from ..email.email import send_email
 from Rohafya import db, tryton
 from io import BytesIO
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from Rohafya.accounts.phones import DUPLICATE_DATA, PHONES_IDENTICAL, clean_phone, phone_error
 import logging
 
 gnu_doctors = Blueprint('charge_doctors', __name__, url_prefix='/doctors/')
@@ -371,23 +373,28 @@ def update_doctor(doctor_id):
         return {"Message": "Aucun Docteur Trouvé à cet ID."}, 404
 
     if request.method == "PUT":
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
+        # Un numéro n'appartient qu'à un seul compte ; le téléphone secondaire est facultatif (vide = NULL).
+        phone = clean_phone(data["DoctorPhone"]) if "DoctorPhone" in data else doctor.DoctorPhone
+        phone2 = clean_phone(data["DoctorPhone2"]) if "DoctorPhone2" in data else doctor.DoctorPhone2
+        conflict = phone_error(Doctors, ("DoctorPhone", "DoctorPhone2"), (phone, phone2), doctor.id)
+        if conflict:
+            return {"message": conflict}, 409 if conflict != PHONES_IDENTICAL else 400
+
         doctor.DoctorName = data.get("DoctorName", doctor.DoctorName)
         doctor.DoctorLastname = data.get("DoctorLastname", doctor.DoctorLastname)
         doctor.DoctorDOB = data.get("DoctorDOB", doctor.DoctorDOB)
         doctor.DoctorEmail = data.get("DoctorEmail", doctor.DoctorEmail)
-        doctor.DoctorPhone = data.get("DoctorPhone", doctor.DoctorPhone)
-        doctor.DoctorPhone2 = data.get("DoctorPhone2", doctor.DoctorPhone2)
+        doctor.DoctorPhone = phone
+        doctor.DoctorPhone2 = phone2
         doctor.DoctorPOB = data.get("DoctorPOB", doctor.DoctorPOB)
-        doctor.DoctorNat = data.get("DoctorPOB", doctor.DoctorPOB)
+        doctor.DoctorNat = data.get("DoctorNat", doctor.DoctorNat)
         doctor.DoctorCNI = data.get("DoctorCNI", doctor.DoctorCNI)
         doctor.Speciality = data.get("Speciality", doctor.Speciality)
         doctor.ModifiedAt = datetime.now()
 
         if not doctor.DoctorNO and not doctor.DoctorName and not doctor.DoctorLastname and not doctor.DoctorDOB:
             return {"message": "Vérifiez la totalité de vos informations avant de continuer"}, 400
-        elif doctor.DoctorPhone == doctor.DoctorPhone2:
-            return {"message": "Les Numéros ne Doivent pas être identiques"}, 400
 
         try:
             if doctor.user_id:
@@ -398,6 +405,10 @@ def update_doctor(doctor_id):
                     user.last_name = doctor.DoctorLastname
 
             db.session.commit()
+        except IntegrityError as e:
+            db.session.rollback()
+            logging.warning(f"Mise à jour du docteur {doctor_id} refusée (doublon) : {e.orig}")
+            return {"message": DUPLICATE_DATA}, 409
         except Exception as e:
             db.session.rollback()
             logging.error(f"Erreur lors de la mise à jour du docteur : {e}")

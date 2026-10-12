@@ -11,6 +11,33 @@ from Rohafya.deco.decorators import require_any_permission, roles_required
 send_result = Blueprint('send_result', __name__, url_prefix='/send_result')
 
 
+def _with_establishment(results):
+    """Résultats partagés, chacun avec le nom de l'établissement qui l'a produit (affiché dans les listes)."""
+    from Rohafya.saas.constants import EXAM_TYPE_TO_KIND
+    from Rohafya.saas.services import find_patient_record, gnuhealth_establishment_name
+
+    patients = {}
+    default_name = None
+    items = []
+    for result in results:
+        data = result.to_dict()
+        if result.patient_id not in patients:
+            patients[result.patient_id] = db.session.get(Patients, result.patient_id) if result.patient_id else None
+        patient = patients[result.patient_id]
+        kind = EXAM_TYPE_TO_KIND.get(data.get("exam_type"))
+        name = None
+        if patient is not None and kind:
+            _, tenant = find_patient_record(patient, kind, result.exam_code)
+            name = tenant.display_name if tenant else None
+        if name is None:
+            if default_name is None:
+                default_name = gnuhealth_establishment_name()
+            name = default_name
+        data["establishment"] = name
+        items.append(data)
+    return items
+
+
 @send_result.route('/', methods=['POST'])
 @cross_origin(supports_credentials=True)
 @jwt_required()
@@ -56,6 +83,12 @@ def send():
             exam_code=exam_code)).scalar_one_or_none()
         if exists:
             return {"Message": "Ce résultat a déjà été envoyé."}
+
+        # Limite de partages fixée par le super-administrateur (aucune configuration = partages libres).
+        from Rohafya.saas.rights import share_right, rights_row
+        right = share_right(rights_row(patient.user_id), patient.user_id)
+        if not right["allowed"]:
+            return {"message": right["message"]}, 403
         
         try :
             types =  db.session.execute(select(Notifications_Type).filter_by(name='INFOS')).scalar_one_or_none()
@@ -121,7 +154,7 @@ def results_by_patient(patient_id):
         return {"Message" : "Aucun patient trouvé."}
 
     send_results = db.session.execute(select(Send_Results).filter_by(patient_id=patient_id)).scalars().all()
-    send_results_list = [result.to_dict() for result in send_results]
+    send_results_list = _with_establishment(send_results)
 
     return jsonify(send_results_list)
 
@@ -137,7 +170,7 @@ def results_by_patient(patient_id):
 def results_by_doctor(doctor_id):
 
     send_results = db.session.execute(select(Send_Results).filter_by(doctor_id=doctor_id)).scalars().all()
-    send_results_list = [result.to_dict() for result in send_results]
+    send_results_list = _with_establishment(send_results)
 
     return jsonify(send_results_list)
 

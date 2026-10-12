@@ -113,7 +113,8 @@ DEFAULT_SETTINGS = {
     "block_unpaid_results": True,
     "commissions_enabled": False,
     "link_token_days": 30,
-    "primary_color": "#1a54c9",
+    # Couleur de la console de l'établissement (vert du logo ROHAFYA par défaut).
+    "primary_color": "#047857",
     "contact_email": "",
     "contact_phone": "",
     # Lecture des comptes rendus PDF par IA (Claude) : désactivée tant que l'établissement n'a pas

@@ -7,7 +7,11 @@ from Rohafya.accounts.models import Patients, User, Role
 from flask_cors import CORS, cross_origin
 from Rohafya.deco.decorators import roles_required, require_any_permission
 from Rohafya import db, tryton
+import logging
+
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from Rohafya.accounts.phones import DUPLICATE_DATA, PHONES_IDENTICAL, clean_phone, phone_error
 from flask_tryton import Tryton
 from Rohafya.deco.generators import generate_random_letters, generate_random_letters_and_digits, generate_unique_numbers, generate_random_email
 from datetime import datetime
@@ -331,58 +335,63 @@ def count_patients():
 @require_any_permission(["administration.charge_patients.update_patients",
                          "patients.charge_patients.update_patients"])
 def update_patient(patient_id=None):
-    """Mettre à jour un patient en particulier
+    """Mettre à jour un patient en particulier (écran Paramètres du patient).
+
+    Un numéro de téléphone n'appartient qu'à un seul compte : un numéro déjà utilisé est refusé
+    avec un message explicite (409) au lieu d'une erreur de base de données.
+    Le téléphone secondaire est facultatif (vide = NULL).
 
     Args:
         patient_id (int, optional): L'identifiant du patient. Defaults to None.
 
     Returns:
-        json: json avec le message de succès ou d'erreur
+        json: {"message", "data"} en cas de succès, {"message"} sinon.
     """
+    patient = db.session.execute(select(Patients).filter_by(id=patient_id)).scalar_one_or_none() if patient_id else None
+    if not patient:
+        return {"message": "Aucun patient trouvé à cet identifiant."}, 404
 
-    if patient_id:
-        patient = db.session.execute(select(Patients).filter_by(id=patient_id)).scalar_one_or_none()
-        if patient:
-            data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    phone = clean_phone(data["PatientPhone"]) if "PatientPhone" in data else patient.PatientPhone
+    phone2 = clean_phone(data["PatientPhone2"]) if "PatientPhone2" in data else patient.PatientPhone2
+    if not phone:
+        return {"message": "Le numéro de téléphone principal est obligatoire."}, 400
+    conflict = phone_error(Patients, ("PatientPhone", "PatientPhone2"), (phone, phone2), patient.id)
+    if conflict:
+        return {"message": conflict}, 409 if conflict != PHONES_IDENTICAL else 400
 
-            patient.PatientName = data.get('PatientName', patient.PatientName)
-            patient.PatientLastname = data.get('PatientLastname', patient.PatientLastname)
-            patient.PatientDOB = data.get('PatientDOB', patient.PatientDOB)
-            patient.PatientPOB = data.get('PatientPOB', patient.PatientPOB)
-            patient.PatientNat = data.get('PatientNat', patient.PatientNat)
-            patient.PatientCNI = data.get('PatientCNI', patient.PatientCNI)
-            patient.PatientGender = data.get('PatientGender', patient.PatientGender)
-            patient.PatientPhone = data.get('PatientPhone', patient.PatientPhone)
-            patient.PatientPhone2 = data.get('PatientPhone2', patient.PatientPhone2)
-            patient.PatientEmail = data.get('PatientEmail', patient.PatientEmail)
-            patient.ModifiedAt = datetime.now()
-            
-            # Mettre à jour patient_is_confirmed à True après la mise à jour
-            patient.patient_is_confirmed = True
+    patient.PatientName = data.get('PatientName', patient.PatientName)
+    patient.PatientLastname = data.get('PatientLastname', patient.PatientLastname)
+    patient.PatientDOB = data.get('PatientDOB', patient.PatientDOB)
+    patient.PatientPOB = data.get('PatientPOB', patient.PatientPOB)
+    patient.PatientNat = data.get('PatientNat', patient.PatientNat)
+    patient.PatientCNI = data.get('PatientCNI', patient.PatientCNI)
+    patient.PatientGender = data.get('PatientGender', patient.PatientGender)
+    patient.PatientPhone = phone
+    patient.PatientPhone2 = phone2
+    patient.PatientEmail = data.get('PatientEmail', patient.PatientEmail)
+    patient.ModifiedAt = datetime.now()
+    # La mise à jour des informations vaut confirmation du profil.
+    patient.patient_is_confirmed = True
 
-            db.session.commit()
+    user = db.session.execute(select(User).filter_by(id=patient.user_id)).scalar_one_or_none() if patient.user_id else None
+    if user:
+        user.first_name = patient.PatientName
+        user.last_name = patient.PatientLastname
+        user.email = patient.PatientEmail
+        user.is_confirmed = True
+        user.confirmed_on = datetime.now()
 
-            patient = db.session.execute(select(Patients).filter_by(id=patient_id)).scalar_one_or_none()
+    try:
+        db.session.commit()
+    except IntegrityError as error:
+        db.session.rollback()
+        logging.warning("Mise à jour du patient %s refusée (doublon) : %s", patient_id, error.orig)
+        return {"message": DUPLICATE_DATA}, 409
 
-            user_id = patient.user_id
-            user = db.session.execute(select(User).filter_by(id=user_id)).scalar_one_or_none()
-            if user:
-                user.first_name = patient.PatientName
-                user.last_name = patient.PatientLastname
-                user.email = patient.PatientEmail
-                
-                # Mettre à jour is_confirmed de l'utilisateur à True
-                user.is_confirmed = True
-                user.confirmed_on = datetime.now()
-
-                db.session.commit()
-
-                return {"Message ": f"Le Patient avec l'id {patient_id} a été mis à jour avec succès.", "data" : patient.to_dict()}
-            else :
-                return {"Message ": "Aucun Utilisateur Trouvé pour ce patient."}
-            
-        else :
-            return {"Message ": "Aucun Patient Trouvé à cet id."}
+    if not user:
+        return {"message": "Aucun utilisateur trouvé pour ce patient.", "data": patient.to_dict()}, 404
+    return {"message": "Vos informations ont été mises à jour.", "data": patient.to_dict()}
 
 
 # Confirmation d'un Patient

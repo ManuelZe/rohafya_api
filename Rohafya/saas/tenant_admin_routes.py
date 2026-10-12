@@ -2,6 +2,8 @@
 
 Accessible aux administrateurs de l'établissement (TenantMember) et au super-administrateur.
 """
+import re
+
 from flask import Blueprint, g, jsonify, request
 from flask_cors import cross_origin
 from flask_jwt_extended import current_user
@@ -9,6 +11,7 @@ from sqlalchemy import func, or_, select
 
 from Rohafya import db
 from Rohafya.accounts.models import Doctors, Patients
+from . import notifications as notif
 from .constants import (
     LINK_ACTIVE,
     LINK_PENDING,
@@ -128,6 +131,10 @@ def update_settings(tenant_id):
                 raise SaasError(f"{key} doit être compris entre 1 et 3650 jours.", 400)
         elif key == "block_unpaid_results":
             value = bool(value)
+        elif key == "primary_color":
+            value = str(value or "").strip().lower()
+            if not re.fullmatch(r"#[0-9a-f]{6}", value):
+                raise SaasError("La couleur principale doit être au format #rrggbb.", 400)
         else:
             value = str(value or "").strip()[:200]
         settings[key] = value
@@ -512,3 +519,33 @@ def tenant_audit(tenant_id):
     total = db.session.execute(select(func.count()).select_from(stmt.subquery())).scalar()
     entries = db.session.execute(stmt.order_by(AuditLog.id.desc()).offset((page - 1) * size).limit(size)).scalars().all()
     return jsonify({"items": [entry.to_dict() for entry in entries], "total": total, "page": page, "page_size": size})
+
+
+# =====================================================================
+# Notifications aux patients et médecins de l'établissement
+# =====================================================================
+
+@tenant_admin.route("/<int:tenant_id>/notifications", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@tenant_admin_required
+def list_notifications(tenant_id):
+    page, size = _page()
+    return jsonify(notif.campaigns_page(g.tenant.id, page, size))
+
+
+@tenant_admin.route("/<int:tenant_id>/notifications", methods=["POST"])
+@cross_origin(supports_credentials=True)
+@tenant_admin_required
+def send_notification(tenant_id):
+    campaign = notif.send_campaign(g.tenant, _json(), current_user, "tenant_admin", ("patients", "doctors"))
+    return jsonify(campaign.to_dict()), 201
+
+
+@tenant_admin.route("/<int:tenant_id>/notification-recipients", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@tenant_admin_required
+def notification_recipients(tenant_id):
+    audience = request.args.get("audience") or "patients"
+    if audience not in ("patients", "doctors"):
+        raise SaasError("Destinataires possibles : patients, médecins.", 400)
+    return jsonify(notif.recipient_options(g.tenant, audience, request.args.get("q", "")))

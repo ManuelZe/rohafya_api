@@ -410,7 +410,8 @@ class Notifications(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     title = db.Column(db.String(255), nullable=True)
-    message = db.Column(db.String(255), nullable=False)
+    # Texte long : les notifications envoyées depuis les consoles dépassent souvent 255 caractères.
+    message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now)
     updated_at = db.Column(db.DateTime, nullable=True)

@@ -1,6 +1,6 @@
 #  LA FONCTION PERMETTANT LE CHARGEMENT DES DOCTEURS DANS BASE DE DONNÉES DOCTEUR
 from flask import Blueprint, jsonify, request, current_app
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import current_user, get_jwt_identity, jwt_required
 from flask_tryton import Tryton
 from ..deco.decorators import roles_required, require_any_permission
 from flask_cors import CORS, cross_origin
@@ -15,6 +15,15 @@ from sqlalchemy import select, and_, exists, or_
 
 
 general_notification = Blueprint('notifications', __name__, url_prefix='/notifications/')
+
+OTHER_USER_FORBIDDEN = {"message": "Vous ne pouvez consulter et gérer que vos propres notifications."}
+
+
+def _other_user(user_id):
+    """Vrai si `user_id` n'est pas l'utilisateur connecté (sauf administrateur de la plateforme)."""
+    from Rohafya.saas.services import is_super_admin
+
+    return int(get_jwt_identity()) != int(user_id) and not is_super_admin(current_user)
 
 
 @general_notification.route('add', methods=["POST"])
@@ -107,6 +116,8 @@ def user_notifications(user_id):
     RÉCUPÉRER TOUTES LES NOTIFICATIONS D'UN UTILISATEUR
     (Exclut celles que l'utilisateur a supprimées localement)
     """
+    if _other_user(user_id):
+        return OTHER_USER_FORBIDDEN, 403
     
     # 1. Sélectionner les notifications qui sont soit pour l'utilisateur spécifique, soit pour tous (all_users)
     # 2. ET qui ne sont PAS dans la table UserDeletedNotifications pour cet user_id
@@ -161,7 +172,8 @@ def delete_single_user_notification(notification_id):
                          "patients.notifications_general.delete_notification",
                          "doctors.notifications_general.delete_notification"])
 def user_delete_notification(user_id, notification_id):
-    
+    if _other_user(user_id):
+        return OTHER_USER_FORBIDDEN, 403
     notification = db.session.execute(select(Notifications).filter_by(id=notification_id)).scalar_one_or_none()
     
     if not notification:
@@ -194,6 +206,8 @@ def user_delete_notification(user_id, notification_id):
                          "doctors.notifications_general.delete_all_user_notification"])
 def delete_all_user_notifications(user_id):
     """L'UTILISATEUR SUPPRIME TOUTES SES NOTIFICATIONS (SOFT DELETE)"""
+    if _other_user(user_id):
+        return OTHER_USER_FORBIDDEN, 403
     
     # On récupère toutes les notifs visibles pour cet user
     stmt = select(Notifications).where(
@@ -325,6 +339,8 @@ def mark_notification_as_read(notification_id):
     notification = db.session.execute(select(Notifications).filter_by(id=notification_id)).scalar_one_or_none()
     if not notification:
         return {"Message": "Aucune Notification trouvée."}
+    if notification.user_id is not None and _other_user(notification.user_id):
+        return OTHER_USER_FORBIDDEN, 403
 
     # NOTE: Pour 'all_users', marquer comme lu ici marque comme lu pour tout le monde 
     # si on utilise le champ is_read de la table Notifications. 

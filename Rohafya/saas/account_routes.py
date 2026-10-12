@@ -8,6 +8,8 @@ from Rohafya import db
 from .constants import LINK_REVOKED, ROLE_PATIENT
 from .decorators import login_needed, register_error_handler
 from .models import LinkToken, PatientLink, Tenant, TenantMember
+from .rights import rights_for
+from . import notifications as notif
 from .services import (
     SaasError,
     active_users_by_email,
@@ -43,8 +45,16 @@ def _json():
 @saas_account.route("/auth/otp/request", methods=["POST"])
 @cross_origin(supports_credentials=True)
 def otp_request():
-    issue_email_otp(_json().get("email"), purpose="login")
-    return {"message": "Si l'adresse est valide, un code de connexion vient d'y être envoyé."}
+    email = normalize_email(_json().get("email"))
+    issue_email_otp(email, purpose="login")
+    # Sans compte pour cette adresse, le code sert à en créer un : l'interface le signale d'emblée.
+    exists = bool(active_users_by_email(email))
+    message = (
+        f"Un code de connexion a été envoyé à {email}."
+        if exists
+        else f"Aucun compte n'existe avec l'adresse {email}. Un code vous a été envoyé pour en créer un."
+    )
+    return {"message": message, "account_exists": exists}
 
 
 @saas_account.route("/auth/otp/verify", methods=["POST"])
@@ -101,9 +111,12 @@ def me():
     return jsonify(
         {
             "is_super_admin": is_super_admin(user),
-            "admin_tenants": [tenant.to_dict(with_settings=False) for tenant in tenants],
+            # La couleur principale habille la console de l'établissement.
+            "admin_tenants": [{**tenant.to_dict(with_settings=False), "primary_color": tenant.setting("primary_color")} for tenant in tenants],
             "links": patient_link_views(patient),
             "features": features_for(user),
+            # Impression et partage : tout est disponible sauf configuration du super-administrateur.
+            "rights": rights_for(user.id),
             "patient_federation_id": patient.PatientFederationID if patient else None,
         }
     )
@@ -184,3 +197,45 @@ def public_token_info(token):
         "status": link_token.status,
         "expires_at": link_token.expires_at,
     }
+
+
+# =====================================================================
+# Notifications de l'utilisateur connecté (patients, médecins, administrateurs)
+# =====================================================================
+
+@saas_account.route("/me/notifications", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def my_notifications():
+    return jsonify(notif.my_notifications(current_user.id))
+
+
+@saas_account.route("/me/notifications/<int:notification_id>/read", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def read_notification(notification_id):
+    return jsonify(notif.mark_read(current_user.id, notification_id))
+
+
+@saas_account.route("/me/notifications/read", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def read_all_notifications():
+    count = notif.mark_all_read(current_user.id)
+    return {"message": f"{count} notification(s) marquée(s) comme lue(s).", "count": count}
+
+
+@saas_account.route("/me/notifications/<int:notification_id>", methods=["DELETE"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def hide_notification(notification_id):
+    notif.hide(current_user.id, notification_id)
+    return {"message": "Notification supprimée de votre liste."}
+
+
+@saas_account.route("/me/notifications", methods=["DELETE"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def hide_all_notifications():
+    count = notif.hide_all(current_user.id)
+    return {"message": f"{count} notification(s) supprimée(s) de votre liste.", "count": count}

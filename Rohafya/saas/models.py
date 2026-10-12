@@ -420,3 +420,71 @@ class Submission(db.Model):
             "responded_at": self.responded_at,
             "created_at": self.created_at,
         }
+
+
+class AccountRights(db.Model):
+    """Droits d'un compte personnel (patient, médecin) réglés par le super-administrateur.
+
+    Sans ligne pour un compte, ou avec un champ vide, l'action correspondante est disponible sans restriction.
+    - Impression des comptes rendus : `print_mode` None (libre), "window" (autorisée entre `print_from` et
+      `print_until`) ou "blocked".
+    - Partage des résultats : `share_limit` partages au plus depuis `share_since` (None = sans limite).
+    """
+
+    __tablename__ = "saas_account_rights"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    print_mode = db.Column(db.String(10), nullable=True)
+    print_from = db.Column(db.DateTime, nullable=True)
+    print_until = db.Column(db.DateTime, nullable=True)
+    share_limit = db.Column(db.Integer, nullable=True)
+    share_since = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, default=_now)
+    updated_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+
+class NotificationCampaign(db.Model):
+    """Envoi d'une notification à un groupe ou à des destinataires choisis (historique des consoles).
+
+    Chaque destinataire reçoit sa propre ligne dans `notifications` (état « lu » individuel) et un e-mail.
+    """
+
+    __tablename__ = "saas_notification_campaigns"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # « super_admin » ou « tenant_admin »
+    sender_role = db.Column(db.String(20), nullable=False)
+    # « admins », « patients » ou « doctors »
+    audience = db.Column(db.String(20), nullable=False)
+    # « all » (tout le groupe) ou « selected » (destinataires choisis)
+    selection = db.Column(db.String(10), nullable=False, default="all")
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    recipients_count = db.Column(db.Integer, nullable=False, default=0)
+    emails_count = db.Column(db.Integer, nullable=False, default=0)
+    emails_sent = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now, index=True)
+
+    tenant = db.relationship("Tenant")
+    sender = db.relationship("User")
+
+    def to_dict(self):
+        sender = self.sender
+        return {
+            "id": self.id,
+            "tenant_id": self.tenant_id,
+            "establishment": self.tenant.display_name if self.tenant else None,
+            "sender_role": self.sender_role,
+            "sender_name": f"{sender.first_name or ''} {sender.last_name or ''}".strip() or sender.email if sender else None,
+            "audience": self.audience,
+            "selection": self.selection,
+            "title": self.title,
+            "message": self.message,
+            "recipients_count": self.recipients_count,
+            "emails_count": self.emails_count,
+            "emails_sent": self.emails_sent,
+            "created_at": self.created_at,
+        }

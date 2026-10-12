@@ -42,7 +42,15 @@ class CustomUserManager(UserManager):
                 # Log user in
                 return self._do_login_user(user, remember_me=request.get_json()['remember_me'])
 
-        return {"message": " Vérifiez vos paramètres de connexion et réessayez. -------- "}, 401
+            # Messages explicites : l'identifiant inconnu est distingué du mauvais mot de passe.
+            identifier = str((request.get_json() or {}).get('username') or (request.get_json() or {}).get('email') or '').strip()
+            if not user and '@' in identifier:
+                return {"message": f"Aucun compte n'existe avec l'adresse e-mail {identifier}. Vérifiez-la, ou créez un compte avec « Code par e-mail »."}, 401
+            if not user:
+                return {"message": f"Aucun compte n'existe avec le nom d'utilisateur {identifier}. Vérifiez-le, ou connectez-vous avec votre adresse e-mail."}, 401
+            return {"message": "Mot de passe incorrect. Vérifiez-le et réessayez."}, 401
+
+        return {"message": "Identifiant ou mot de passe incorrect. Vérifiez vos paramètres de connexion et réessayez."}, 401
 
 
     def _do_login_user(self, user, remember_me=False):
