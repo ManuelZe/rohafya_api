@@ -6,6 +6,10 @@ Ressources prises en charge :
 - Observation        → valeurs mesurées d'un DiagnosticReport (référencées par `result`)
 - Invoice            → facture et ses lignes (`lineItem`)
 """
+import base64
+import html
+import re
+
 from .constants import KIND_EXPLORATION, KIND_IMAGING, KIND_INVOICE, KIND_LAB
 from .ingestion import notify_new_results, upsert_patient, upsert_record
 from .services import SaasError
@@ -60,6 +64,22 @@ def _display(reference):
 def _identifier(resource):
     ident = _first(resource.get("identifier"))
     return ident.get("value") or resource.get("id")
+
+
+def _narrative(resource):
+    """Texte rédigé du compte rendu : `presentedForm` en texte brut, sinon le résumé lisible (`text.div`)."""
+    for form in resource.get("presentedForm") or []:
+        if isinstance(form, dict) and str(form.get("contentType", "")).startswith("text/plain") and form.get("data"):
+            try:
+                return base64.b64decode(form["data"]).decode("utf-8").strip() or None
+            except (ValueError, UnicodeDecodeError):
+                continue
+    div = (resource.get("text") or {}).get("div") if isinstance(resource.get("text"), dict) else None
+    if not div:
+        return None
+    lines = re.sub(r"<\s*(br|/p|/div|/li)\s*/?>", "\n", div, flags=re.I)
+    text = html.unescape(re.sub(r"<[^>]+>", "", lines))
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip()) or None
 
 
 def _money(value):
@@ -148,6 +168,8 @@ def map_diagnostic_report(resource, index):
     requestor = _display(_first(resource.get("basedOn")))
     effective = resource.get("effectiveDateTime") or (resource.get("effectivePeriod") or {}).get("start")
     conclusion = resource.get("conclusion")
+    # Résultat rédigé (champ « results » / « resultat ») distinct de la conclusion.
+    findings = _narrative(resource)
 
     details = []
     for reference in resource.get("result", []):
@@ -167,7 +189,7 @@ def map_diagnostic_report(resource, index):
                 "realisateur": performer,
                 "validated_by": interpreter,
                 "requestor": requestor,
-                "resultat": conclusion,
+                "resultat": findings,
                 "conclusion": conclusion,
             }
         )
@@ -183,7 +205,8 @@ def map_diagnostic_report(resource, index):
                 "validated_by": interpreter,
                 "requestor": requestor,
                 "diagnosis": conclusion,
-                "resultat": conclusion if kind == KIND_EXPLORATION else None,
+                # Laboratoire : « results » ; exploration fonctionnelle : « resultat ».
+                ("resultat" if kind == KIND_EXPLORATION else "results"): findings,
             }
         )
     return kind, data

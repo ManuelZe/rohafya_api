@@ -81,6 +81,26 @@ Authentification : en-tête `X-ROHAFYA-API-Key: <clé>` (l'ancien `X-EDEN-API-Ke
 - Un lot est enregistré en entier ou pas du tout.
 - `local_ref` est le numéro du dossier du patient dans le logiciel de l'établissement.
 
+### Champs enregistrés et renvoyés (les trois voies d'entrée)
+
+Le connecteur GNU Health, l'API ROHAFYA et FHIR enregistrent leurs données par la même fonction (`ingestion.upsert_record`), qui les ramène à une forme unique (`saas/normalization.py`). Ce sont les champs des routes GNU Health du patient, c'est-à-dire ceux des interfaces du front (`ExamensLab`, `ExamenImagerie`, `ExplorationLab`, `FacturesResponseApi` dans `src/app/patients/patients.models.ts`).
+
+- Tous les champs sont toujours présents. Un champ non fourni vaut `null`.
+- Les champs inconnus sont écartés, en particulier les paramètres de connexion à un serveur d'imagerie.
+- Le résultat rédigé est dans `results` pour le laboratoire, `resultat` pour l'imagerie, et `resultat` et `results` pour l'exploration fonctionnelle. La conclusion est dans `diagnosis` pour le laboratoire et l'exploration, et dans `conclusion` pour l'imagerie.
+- Synonymes acceptés à l'entrée, ramenés au champ attendu :
+
+  | Type | Synonymes |
+  | --- | --- |
+  | Laboratoire | `resultat`, `resultats`, `result` → `results` ; `conclusion` → `diagnosis` |
+  | Imagerie | `results`, `resultats`, `result` → `resultat` ; `diagnosis` → `conclusion` |
+  | Exploration | `resultats`, `result` → `resultat` ; `conclusion` → `diagnosis` |
+  | Lignes de détail | `value` → `result`, `unit` → `units`, `reference_range` → `normal_range`, `low` / `high` → `lower_limit` / `upper_limit`, `comment` → `remarks`, `abnormal` → `warning` |
+
+  Un champ fourni sous son vrai nom n'est jamais écrasé par un synonyme.
+- La normalisation s'applique aussi à la lecture : les enregistrements reçus avant cette règle sont renvoyés sous la même forme.
+- Contrôle : `Rohafya/envDoc/bin/python Rohafya/tests/test_normalisation.py`.
+
 ## Envoi des données en HL7 FHIR R4
 
 `POST /fhir/r4` avec un `Bundle`. Il est aussi possible d'envoyer une ressource seule : `POST /fhir/r4/<Type>`.
@@ -93,6 +113,8 @@ Authentification : en-tête `X-ROHAFYA-API-Key: <clé>` (l'ancien `X-EDEN-API-Ke
 | `DiagnosticReport` autre catégorie | exploration fonctionnelle |
 | `Observation` référencée par `DiagnosticReport.result` | valeurs mesurées (`interpretation` H/L… = hors norme) |
 | `Invoice` (`issued` / `balanced` / `cancelled`) | facture à régler / payée / annulée |
+
+Dans un `DiagnosticReport`, `conclusion` devient la conclusion (`diagnosis`, ou `conclusion` en imagerie). Le texte du compte rendu (`presentedForm` en `text/plain`, sinon le résumé lisible `text.div`) devient le résultat rédigé (`results`, ou `resultat` en imagerie et en exploration).
 
 Les références `urn:uuid:` entre les entrées d'un même Bundle sont résolues.
 

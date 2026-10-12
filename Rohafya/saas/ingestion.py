@@ -10,6 +10,7 @@ from sqlalchemy import select
 from Rohafya import db
 from .constants import CODE_FIELD, KIND_INVOICE, LINK_ACTIVE, RECORD_KINDS
 from .models import PatientLink, TenantPatient, TenantRecord
+from .normalization import normalize_details, normalize_payload
 from .services import SaasError, normalize_email, notify_user, now, parse_datetime
 
 PATIENT_FIELDS = ("first_name", "last_name", "email", "phone", "birth_date", "gender")
@@ -65,8 +66,10 @@ def upsert_record(tenant, kind, data, source):
         field = "reference (ou invoice_number)" if kind == KIND_INVOICE else CODE_FIELD[kind]
         raise SaasError(f"Le champ {field} est obligatoire pour le type {kind}.", 400)
 
-    payload = {key: value for key, value in data.items() if key not in ("local_ref", "details", "products")}
-    payload[CODE_FIELD[kind]] = code
+    raw = {key: value for key, value in data.items() if key not in ("local_ref", "details", "products")}
+    raw[CODE_FIELD[kind]] = code
+    # Mêmes champs quelle que soit la voie d'entrée (connecteur, API, FHIR) : voir normalization.py.
+    payload = normalize_payload(kind, raw)
     if kind == KIND_INVOICE:
         payload.setdefault("invoice_number", code)
         details = data.get("products") or data.get("details") or []
@@ -84,7 +87,7 @@ def upsert_record(tenant, kind, data, source):
         db.session.add(record)
     record.local_ref = local_ref
     record.payload = payload
-    record.details = details
+    record.details = normalize_details(kind, details)
     record.validated_at = validated_at
     record.source = source
     record.updated_at = now()

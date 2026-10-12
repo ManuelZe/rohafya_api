@@ -5,7 +5,7 @@ from Rohafya import db, tryton
 from sqlalchemy import select
 from ..accounts.models import Patients, User, Send_Results, Doctors
 from Rohafya.saas.constants import EXAM_TYPE_TO_KIND
-from Rohafya.saas.services import audit, find_patient_record, gnuhealth_ref, record_details_response, serialize_record
+from Rohafya.saas.services import audit, find_patient_record, gnuhealth_establishment_name, gnuhealth_ref, record_details_response, serialize_record
 
 
 from Rohafya.deco.decorators import require_any_permission, roles_required
@@ -111,6 +111,7 @@ def get_results(exam_type, exam_code, patient_federation_id):
             for result in results:
                 results_list.append({
                     "id": result.id,
+                    "establishment": gnuhealth_establishment_name(),
                     "analytes_summary" : result.analytes_summary,
                     "date_analysis": result.date_analysis,
                     "date_requested": result.date_requested,
@@ -148,6 +149,7 @@ def get_results(exam_type, exam_code, patient_federation_id):
             for result in results:
                 results_list.append({
                     "id": result.id,
+                    "establishment": gnuhealth_establishment_name(),
                     "date": result.date,
                     "request_date": result.request_date,
                     "create_date": result.create_date,
@@ -188,6 +190,7 @@ def get_results(exam_type, exam_code, patient_federation_id):
             for result in results:
                 results_list.append({
                     "id": result.id,
+                    "establishment": gnuhealth_establishment_name(),
                     "analytes_summary" : result.analytes_summary,
                     "commentaire" : result.commentaire,
                     "date_analysis": result.date_analysis,

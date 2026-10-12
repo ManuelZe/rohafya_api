@@ -26,6 +26,8 @@ from .constants import (
     DEFAULT_GNUHEALTH_NAME,
     DEFAULT_GNUHEALTH_SLUG,
     DEFAULT_SETTINGS,
+    KIND_EXPLORATION,
+    KIND_IMAGING,
     KIND_INVOICE,
     LINK_ACTIVE,
     LINK_PENDING,
@@ -45,6 +47,7 @@ from .constants import (
     front_origins,
 )
 from .models import AuditLog, EmailOtp, LinkToken, PatientLink, PractitionerLink, Tenant, TenantMember, TenantRecord
+from .normalization import RESULT_FIELDS, normalize_details, normalize_payload
 
 log = logging.getLogger(__name__)
 
@@ -353,14 +356,21 @@ def result_expiration(tenant, validated_at):
 
 
 def serialize_record(record, tenant, patient):
-    """Enregistrement au format attendu par le front (identique aux réponses GNU Health)."""
-    data = dict(record.payload or {})
+    """Enregistrement au format attendu par le front (mêmes champs que les réponses GNU Health)."""
+    data = normalize_payload(record.kind, dict(record.payload or {}))
     data["id"] = RECORD_ID_OFFSET + record.id
     data["establishment"] = tenant.display_name
     data["establishment_id"] = tenant.id
     if patient is not None:
-        data.setdefault("matricule_patient", patient.PatientFederationID)
-        data.setdefault("patient", f"{patient.PatientName or ''} {patient.PatientLastname or ''}".strip())
+        fields = RESULT_FIELDS.get(record.kind, ())
+        if "matricule_patient" in fields and not data.get("matricule_patient"):
+            data["matricule_patient"] = patient.PatientFederationID
+        if "patient" in fields and not data.get("patient"):
+            data["patient"] = f"{patient.PatientName or ''} {patient.PatientLastname or ''}".strip() or None
+    if record.kind in (KIND_IMAGING, KIND_EXPLORATION):
+        # Comme GNU Health : message si l'accès est bloqué par une facture impayée.
+        blocked = tenant.setting("block_unpaid_results") and has_unpaid_invoices(tenant.id, record.local_ref)
+        data["error"] = UNPAID_MESSAGE if blocked else None
     if record.kind != KIND_INVOICE:
         expiration = result_expiration(tenant, record.validated_at)
         days = int(tenant.setting("result_access_days") or 90)
@@ -426,7 +436,7 @@ def record_details_response(record, tenant, check_unpaid=True):
         return {"Message": EXPIRED_MESSAGE}, 200
     if check_unpaid and tenant.setting("block_unpaid_results") and has_unpaid_invoices(tenant.id, record.local_ref):
         return {"message": UNPAID_MESSAGE}, 403
-    return list(record.details or []), 200
+    return normalize_details(record.kind, list(record.details or [])), 200
 
 
 # =====================================================================

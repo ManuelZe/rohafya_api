@@ -233,9 +233,7 @@ def imagerie(examen, matricule, prescripteur=None):
             "ref_physician": champ(etude, "ref_phys"),
             "req_physician": champ(etude, "req_phys"),
             "requested_procedure_id": champ(etude, "requested_procedure_id"),
-            "server": champ(etude, "server.rec_name"),
-            "server_domain": champ(etude, "server.domain"),
-            "server_username": champ(etude, "server.user"),
+            # Jamais les paramètres de connexion au serveur d'imagerie (serveur, domaine, identifiant).
             "uuid": champ(etude, "uuid"),
             "write_date": champ(etude, "write_date"),
             "write_uid": champ(etude, "write_uid.name"),
