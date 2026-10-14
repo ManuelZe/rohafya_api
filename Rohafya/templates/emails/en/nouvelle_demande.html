@@ -1,0 +1,8 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Hello,<br><br><strong>{{ author }}</strong> sent a <strong>{{ kind_label }}</strong> to <strong>{{ establishment }}</strong>.{% endcall %}
+{% call ui.paragraph() %}Read it and reply from the facility console, under <strong>“Requests”</strong>. The author will be notified of your reply.{% endcall %}
+{{ ui.button(front_url ~ admin_path, "See the requests") }}
+{% endblock %}

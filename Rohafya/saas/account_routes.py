@@ -7,9 +7,10 @@ from sqlalchemy import select
 from Rohafya import db
 from .constants import LINK_REVOKED, ROLE_PATIENT
 from .decorators import login_needed, register_error_handler
-from .models import LinkToken, PatientLink, Tenant, TenantMember
+from .models import LinkToken, PatientLink, Tenant, TenantMember, UserPreference
 from .rights import rights_for
 from . import notifications as notif
+from .trials import create_trial_request
 from .services import (
     SaasError,
     active_users_by_email,
@@ -96,6 +97,32 @@ def otp_verify():
 # Profil SaaS de l'utilisateur connecté
 # =====================================================================
 
+LOCALES = ("fr", "en")
+
+
+def _locale_of(user_id):
+    pref = db.session.execute(select(UserPreference).filter_by(user_id=user_id)).scalar_one_or_none()
+    return pref.locale if pref else "fr"
+
+
+@saas_account.route("/me/preferences", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@login_needed
+def update_preferences():
+    """Langue de l'interface du compte : « fr » ou « en »."""
+    locale = (_json().get("locale") or "").strip().lower()
+    if locale not in LOCALES:
+        raise SaasError("Langue inconnue : choisissez « fr » ou « en ».", 400)
+    pref = db.session.execute(select(UserPreference).filter_by(user_id=current_user.id)).scalar_one_or_none()
+    if pref is None:
+        pref = UserPreference(user_id=current_user.id)
+        db.session.add(pref)
+    pref.locale = locale
+    pref.updated_at = now()
+    db.session.commit()
+    return {"locale": locale}
+
+
 @saas_account.route("/me", methods=["GET"])
 @cross_origin(supports_credentials=True)
 @login_needed
@@ -117,6 +144,8 @@ def me():
             "features": features_for(user),
             # Impression et partage : tout est disponible sauf configuration du super-administrateur.
             "rights": rights_for(user.id),
+            # Langue de l'interface choisie par le compte (« fr » par défaut).
+            "locale": _locale_of(user.id),
             "patient_federation_id": patient.PatientFederationID if patient else None,
         }
     )
@@ -239,3 +268,14 @@ def hide_notification(notification_id):
 def hide_all_notifications():
     count = notif.hide_all(current_user.id)
     return {"message": f"{count} notification(s) supprimée(s) de votre liste.", "count": count}
+
+
+# =====================================================================
+# Demande d'essai d'un établissement (site de présentation, sans compte)
+# =====================================================================
+
+@saas_account.route("/public/trial-requests", methods=["POST"])
+@cross_origin(supports_credentials=True)
+def trial_request():
+    create_trial_request(_json())
+    return {"message": "Merci ! Votre demande est bien reçue : nous vous recontactons sous 24 heures ouvrées pour fixer la démonstration."}, 201

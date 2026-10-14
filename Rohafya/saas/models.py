@@ -488,3 +488,172 @@ class NotificationCampaign(db.Model):
             "emails_sent": self.emails_sent,
             "created_at": self.created_at,
         }
+
+
+class UserPreference(db.Model):
+    """Préférences d'un compte, retrouvées sur tous ses appareils (langue de l'interface)."""
+
+    __tablename__ = "saas_user_preferences"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    # « fr » (par défaut) ou « en »
+    locale = db.Column(db.String(5), nullable=False, default="fr")
+    updated_at = db.Column(db.DateTime, default=_now)
+
+
+class TrialRequest(db.Model):
+    """Demande d'essai envoyée par un établissement depuis le site de présentation (sans compte)."""
+
+    __tablename__ = "saas_trial_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    contact_name = db.Column(db.String(150), nullable=False)
+    job_title = db.Column(db.String(150), nullable=True)
+    establishment = db.Column(db.String(200), nullable=False)
+    city = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(40), nullable=False)
+    email = db.Column(db.String(200), nullable=False)
+    # laboratoire, imagerie, centre_medical, clinique, hopital, reseau, autre
+    kind = db.Column(db.String(30), nullable=False)
+    # moins_200, 200_500, 500_2000, plus_2000
+    monthly_volume = db.Column(db.String(20), nullable=True)
+    software = db.Column(db.String(200), nullable=True)
+    pain_points = db.Column(db.Text, nullable=True)
+    preferred_slot = db.Column(db.String(60), nullable=True)
+    locale = db.Column(db.String(5), nullable=False, default="fr")
+    # nouvelle, contactee, essai, close
+    status = db.Column(db.String(20), nullable=False, default="nouvelle")
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now, index=True)
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "contact_name": self.contact_name,
+            "job_title": self.job_title,
+            "establishment": self.establishment,
+            "city": self.city,
+            "phone": self.phone,
+            "email": self.email,
+            "kind": self.kind,
+            "monthly_volume": self.monthly_volume,
+            "software": self.software,
+            "pain_points": self.pain_points,
+            "preferred_slot": self.preferred_slot,
+            "locale": self.locale,
+            "status": self.status,
+            "note": self.note,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+# =====================================================================
+# Abonnements, consommation et factures des établissements
+# =====================================================================
+
+class TenantSubscription(db.Model):
+    """Formule et rythme de paiement d'un établissement (une ligne par établissement)."""
+
+    __tablename__ = "saas_subscriptions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="CASCADE"), nullable=False, unique=True)
+    plan = db.Column(db.String(20), nullable=False, default="standard")
+    status = db.Column(db.String(20), nullable=False, default="essai")
+    billing_cycle = db.Column(db.String(20), nullable=False, default="mensuel")
+    # Faux : établissement non facturé (GNU Health historique, établissement interne).
+    billed = db.Column(db.Boolean, nullable=False, default=True)
+    trial_ends_at = db.Column(db.Date, nullable=True)
+    # Prochaine facture d'abonnement (début de la période suivante, payée d'avance).
+    next_invoice_on = db.Column(db.Date, nullable=True)
+    # Formule « Réseau ou hôpital » ou accord particulier : valeurs propres à l'établissement.
+    custom_quota = db.Column(db.Integer, nullable=True)
+    custom_monthly_price = db.Column(db.Integer, nullable=True)
+    custom_setup_fee = db.Column(db.Integer, nullable=True)
+    setup_fee_waived = db.Column(db.Boolean, nullable=False, default=False)
+    setup_invoiced = db.Column(db.Boolean, nullable=False, default=False)
+    # Mois offerts restant à déduire (parrainage) : un par établissement recommandé qui s'abonne.
+    free_months = db.Column(db.Integer, nullable=False, default=0)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now)
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    tenant = db.relationship("Tenant")
+
+
+class UsageEvent(db.Model):
+    """Un résultat publié (laboratoire, imagerie, exploration), compté une fois par mois de publication.
+
+    Une mise à jour du même résultat n'est pas recomptée ; un résultat supprimé reste compté.
+    """
+
+    __tablename__ = "saas_usage_events"
+    __table_args__ = (db.UniqueConstraint("tenant_id", "kind", "code", "period", name="uq_saas_usage"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)
+    code = db.Column(db.String(120), nullable=False)
+    period = db.Column(db.String(7), nullable=False, index=True)  # AAAA-MM
+    created_at = db.Column(db.DateTime, default=_now)
+
+
+class UsageAlert(db.Model):
+    """Alerte de volume déjà envoyée (seuil atteint dans le mois) : une seule fois par seuil et par mois."""
+
+    __tablename__ = "saas_usage_alerts"
+    __table_args__ = (db.UniqueConstraint("tenant_id", "period", "threshold", name="uq_saas_usage_alert"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    period = db.Column(db.String(7), nullable=False)
+    threshold = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=_now)
+
+
+class TenantInvoice(db.Model):
+    """Facture d'un établissement (abonnement payé d'avance, mise en service)."""
+
+    __tablename__ = "saas_tenant_invoices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(30), nullable=False, unique=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("saas_tenants.id", ondelete="SET NULL"), nullable=True, index=True)
+    establishment = db.Column(db.String(200), nullable=False)
+    plan = db.Column(db.String(20), nullable=True)
+    billing_cycle = db.Column(db.String(20), nullable=True)
+    period_start = db.Column(db.Date, nullable=True)
+    period_end = db.Column(db.Date, nullable=True)
+    lines = db.Column(JSON, nullable=False, default=list)
+    total = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(20), nullable=False, default="emise", index=True)
+    issued_on = db.Column(db.Date, nullable=False)
+    due_on = db.Column(db.Date, nullable=False)
+    paid_on = db.Column(db.Date, nullable=True)
+    payment_reference = db.Column(db.String(120), nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now)
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "number": self.number,
+            "tenant_id": self.tenant_id,
+            "establishment": self.establishment,
+            "plan": self.plan,
+            "billing_cycle": self.billing_cycle,
+            "period_start": self.period_start.isoformat() if self.period_start else None,
+            "period_end": self.period_end.isoformat() if self.period_end else None,
+            "lines": self.lines or [],
+            "total": self.total,
+            "status": self.status,
+            "issued_on": self.issued_on.isoformat() if self.issued_on else None,
+            "due_on": self.due_on.isoformat() if self.due_on else None,
+            "paid_on": self.paid_on.isoformat() if self.paid_on else None,
+            "payment_reference": self.payment_reference,
+            "note": self.note,
+        }

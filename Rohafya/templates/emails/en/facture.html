@@ -1,0 +1,10 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Invoice {{ number }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Invoice {{ number }}</td></tr>
+{% call ui.paragraph() %}Hello,<br><br>Invoice <strong>{{ number }}</strong> for {{ establishment }}, covering {{ period }}, is available.{% endcall %}
+{% call ui.box() %}Amount: <strong>{{ total }} FCFA</strong><br>Due by {{ due }}, by Mobile Money or bank transfer.{% endcall %}
+{{ ui.button(open_url, "View and download the invoice") }}
+{% call ui.note() %}Subscription paid in advance. For any question about this invoice, reply to this message.{% endcall %}
+{% endblock %}

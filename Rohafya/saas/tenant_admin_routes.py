@@ -24,6 +24,7 @@ from .constants import (
 )
 from .decorators import register_error_handler, tenant_admin_required
 from .models import AuditLog, LinkToken, PatientLink, PractitionerLink, TenantMember, TenantPatient, TenantRecord
+from . import billing
 from .services import (
     SaasError,
     audit,
@@ -170,7 +171,36 @@ def dashboard(tenant_id):
     ).scalars().all()
     stats["recent_activity"] = [entry.to_dict() for entry in recent]
     stats["tenant"] = g.tenant.to_dict(with_settings=False)
+    summary = billing.usage_summary(g.tenant, months=1)
+    stats["usage"] = {**summary["current"], "subscription": summary["subscription"]}
+    db.session.commit()
     return jsonify(stats)
+
+
+# =====================================================================
+# Abonnement et factures de l'établissement (lecture seule : réglés par le super-administrateur)
+# =====================================================================
+
+@tenant_admin.route("/<int:tenant_id>/subscription", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@tenant_admin_required
+def subscription(tenant_id):
+    body = billing.usage_summary(g.tenant)
+    body["invoices"] = billing.invoices_page(tenant_id=g.tenant.id, size=36)["items"]
+    db.session.commit()
+    return jsonify(body)
+
+
+@tenant_admin.route("/<int:tenant_id>/invoices/<int:invoice_id>", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@tenant_admin_required
+def invoice_detail(tenant_id, invoice_id):
+    from .models import TenantInvoice
+
+    invoice = db.session.get(TenantInvoice, invoice_id)
+    if invoice is None or invoice.tenant_id != g.tenant.id:
+        raise SaasError("Facture introuvable.", 404)
+    return jsonify({**billing.invoice_dict(invoice), "issuer": billing.issuer()})
 
 
 # =====================================================================

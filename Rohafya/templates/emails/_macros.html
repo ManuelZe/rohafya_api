@@ -1,0 +1,16 @@
+{% macro button(href, label) -%}
+<tr>
+    <td align="center" style="padding-top:20px; padding-bottom:12px;">
+        <a href="{{ href }}" style="display:inline-block; background:#047857; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px;">{{ label }}</a>
+    </td>
+</tr>
+{%- endmacro %}
+{% macro paragraph() -%}
+<tr><td style="font-size:15px; line-height:1.6; padding-bottom:14px;">{{ caller() }}</td></tr>
+{%- endmacro %}
+{% macro note() -%}
+<tr><td style="font-size:12px; line-height:1.5; color:#6b7280; padding-top:14px; border-top:1px solid #e5e7eb;">{{ caller() }}</td></tr>
+{%- endmacro %}
+{% macro box() -%}
+<tr><td style="font-size:15px; line-height:1.6; padding:14px 16px; background:#ecfdf5; border-left:4px solid #047857; border-radius:6px;">{{ caller() }}</td></tr>
+{%- endmacro %}

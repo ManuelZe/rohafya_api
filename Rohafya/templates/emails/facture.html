@@ -1,0 +1,10 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Facture {{ number }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Facture {{ number }}</td></tr>
+{% call ui.paragraph() %}Bonjour,<br><br>La facture <strong>{{ number }}</strong> de {{ establishment }} pour la période du {{ period }} est disponible.{% endcall %}
+{% call ui.box() %}Montant&nbsp;: <strong>{{ total }} FCFA</strong><br>À régler avant le {{ due }}, par Mobile Money ou virement.{% endcall %}
+{{ ui.button(open_url, "Voir et télécharger la facture") }}
+{% call ui.note() %}Abonnement payé d'avance. Pour toute question sur cette facture, répondez à ce message.{% endcall %}
+{% endblock %}

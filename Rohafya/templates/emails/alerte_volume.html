@@ -1,0 +1,9 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}{{ establishment }} : {{ percent }} % du volume de la formule{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">{{ percent }} % du volume de votre formule</td></tr>
+{% call ui.paragraph() %}Bonjour,<br><br><strong>{{ establishment }}</strong> a publié <strong>{{ count }}</strong> résultats ce mois-ci, pour <strong>{{ quota }}</strong> compris dans la formule {{ plan }}.{% endcall %}
+{% call ui.paragraph() %}Rien ne change pour vos patients : la publication continue normalement. Si ce volume se confirme trois mois de suite, la formule adaptée s'appliquera au trimestre suivant ; nous vous le proposerons avant.{% endcall %}
+{{ ui.button(open_url, "Voir l'abonnement") }}
+{% endblock %}

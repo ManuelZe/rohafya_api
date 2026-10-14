@@ -106,10 +106,14 @@ def send():
                 doctor_user_id = doctor.user_id
     
             if types :
+                from Rohafya.saas import i18n
+                locale = i18n.user_locale(doctor.user_id if doctor else None)
+                params = {"exam_type": exam_type, "exam_code": exam_code, "patient": patient_name,
+                          "patient_id": patient_federation_id if patient else "?"}
                 notification = Notifications(
                     types=types.id,
-                    title="Nouveau Résultat Envoyé.",
-                    message=f"Un nouveau résultat d'examen de type '{exam_type}' avec le code '{exam_code}' a été envoyé par le patient {patient_name}. Matricule du patient : {patient_federation_id if patient else 'Inconnu'}.",
+                    title=i18n.text("share.new.title", locale),
+                    message=i18n.text("share.new.message", locale, **params),
                     created_at=datetime.datetime.now(),
                     all_users=False,
                     user_id=doctor_user_id if doctor else None
@@ -210,10 +214,12 @@ def del_send_result(result_id):
     doctor = db.session.execute(select(Doctors).filter_by(id=result.doctor_id)).scalar_one_or_none()
     doctor_user_id = doctor.user.id if doctor else None
 
+    from Rohafya.saas import i18n
+    locale = i18n.user_locale(doctor_user_id)
     notification = Notifications(
         types = types.id,
-        title = "Résultat Supprimé.",
-        message = f"Le Patient {patient_name} vient de Supprimer le partage de résultat. Le résultat d'examen de type '{result.exam_type}' avec le code '{result.exam_code}' a été supprimé.",
+        title = i18n.text("share.deleted.title", locale),
+        message = i18n.text("share.deleted.message", locale, patient=patient_name, exam_type=result.exam_type, exam_code=result.exam_code),
         created_at = datetime.datetime.now(),
         all_users = False,
         user_id = doctor_user_id if doctor else None

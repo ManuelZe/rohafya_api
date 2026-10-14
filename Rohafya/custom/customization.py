@@ -186,7 +186,7 @@ class CustomUserManager(UserManager):
 
             #body = "Le doctor "+DoctorName+" "+DoctorLastname+ " a pour Username : >>  "+username+" /Password >>  "+password
             body = "Contextualisation"
-            subject = "PARAMETRES DE CONNEXION"
+            subject = "mail.account_created"
             template_html = "emails/doctor_save.html"
             try :
                 send_email(user.email, subject, body, template_html, **context)

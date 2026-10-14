@@ -1,0 +1,15 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Your ROHAFYA sign-in details{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Hello {{ first_name }},<br><br>Here are your new ROHAFYA sign-in details.{% endcall %}
+{% call ui.box() %}
+Username: <strong>{{ username }}</strong><br>
+Password: <strong>{{ password }}</strong><br>
+ID number: {{ matricule }}<br>
+Email: {{ email }}
+{% endcall %}
+{% call ui.paragraph() %}<br>Please change this password the first time you sign in.{% endcall %}
+{{ ui.button(front_url ~ "/connexion" if front_url else "https://rohafya.com/connexion", "Sign in") }}
+{% call ui.note() %}If you did not ask for this, please contact your facility.{% endcall %}
+{% endblock %}

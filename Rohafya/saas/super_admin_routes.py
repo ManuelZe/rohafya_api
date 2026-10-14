@@ -36,6 +36,8 @@ from .services import (
 )
 from .rights import admin_rights_view, rights_summaries, update_rights
 from . import notifications as notif
+from .trials import trial_requests_page, update_trial_request
+from . import billing
 from .tenant_admin_routes import tenant_stats
 
 super_admin = Blueprint("super_admin", __name__, url_prefix="/saas/super")
@@ -176,6 +178,7 @@ def create_tenant():
         api_key, tenant.api_key_hash, tenant.api_key_hint = generate_api_key()
     db.session.add(tenant)
     db.session.flush()
+    billing.subscription_of(tenant)
     audit("tenant.created", tenant_id=tenant.id, user_id=current_user.id, target=tenant.slug, commit=False)
     db.session.commit()
     body = _tenant_row(tenant)
@@ -230,7 +233,7 @@ def delete_tenant(tenant_id):
     établissements) ; seuls leurs liens avec cet établissement disparaissent. Le journal
     d'audit est conservé.
     """
-    from .models import LinkToken, PdfImport, PractitionerLink, TenantPatient
+    from .models import LinkToken, PdfImport, PractitionerLink, TenantInvoice, TenantPatient, TenantSubscription, UsageAlert, UsageEvent
 
     tenant = _tenant(tenant_id)
     if tenant.source_type == SOURCE_GNUHEALTH:
@@ -246,6 +249,9 @@ def delete_tenant(tenant_id):
         ("rattachements", PatientLink),
         ("medecins", PractitionerLink),
         ("qr_codes", LinkToken),
+        ("volume", UsageEvent),
+        ("alertes", UsageAlert),
+        ("abonnement", TenantSubscription),
     ):
         rows = db.session.execute(select(model).filter_by(tenant_id=tenant.id)).scalars().all()
         counts[label] = len(rows)
@@ -278,6 +284,10 @@ def delete_tenant(tenant_id):
         user = db.session.get(User, user_id)
         if not still_admin and admin_role and user and admin_role in user.roles:
             user.roles.remove(admin_role)
+
+    # Les factures émises sont des pièces comptables : elles restent, au nom de l'établissement.
+    for invoice in db.session.execute(select(TenantInvoice).filter_by(tenant_id=tenant.id)).scalars():
+        invoice.tenant_id = None
 
     # Le journal reste lisible : on garde la trace de l'établissement dans les détails.
     for entry in db.session.execute(select(AuditLog).filter_by(tenant_id=tenant.id)).scalars():
@@ -342,7 +352,7 @@ def add_admin(tenant_id):
 
     sent = send_mail(
         email,
-        f"Vous administrez {tenant.display_name} sur ROHAFYA",
+        "mail.admin_invite",
         "emails/admin_invite.html",
         first_name=user.first_name,
         establishment=tenant.display_name,
@@ -535,6 +545,103 @@ def send_notification(tenant_id):
 def notification_recipients(tenant_id):
     tenant = _tenant(tenant_id)
     return jsonify(notif.recipient_options(tenant, request.args.get("audience") or "admins", request.args.get("q", "")))
+
+
+# =====================================================================
+# Demandes d'essai des établissements (site de présentation)
+# =====================================================================
+
+@super_admin.route("/trial-requests", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def list_trial_requests():
+    page, size = _page()
+    return jsonify(trial_requests_page(request.args.get("status") or None, page, size))
+
+
+@super_admin.route("/trial-requests/<int:request_id>", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def edit_trial_request(request_id):
+    trial = update_trial_request(request_id, _json())
+    audit("trial.updated", user_id=current_user.id, target=trial.establishment, details={"status": trial.status}, commit=True)
+    return jsonify(trial.to_dict())
+
+
+# =====================================================================
+# Abonnements et factures des établissements
+# =====================================================================
+
+@super_admin.route("/billing", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def billing_overview():
+    return jsonify(billing.billing_overview())
+
+
+@super_admin.route("/tenants/<int:tenant_id>/subscription", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def get_subscription(tenant_id):
+    tenant = _tenant(tenant_id)
+    body = billing.usage_summary(tenant)
+    body["invoices"] = billing.invoices_page(tenant_id=tenant.id, size=24)["items"]
+    db.session.commit()
+    return jsonify(body)
+
+
+@super_admin.route("/tenants/<int:tenant_id>/subscription", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def edit_subscription(tenant_id):
+    tenant = _tenant(tenant_id)
+    billing.update_subscription(tenant, _json(), current_user.id)
+    body = billing.usage_summary(tenant)
+    body["invoices"] = billing.invoices_page(tenant_id=tenant.id, size=24)["items"]
+    db.session.commit()
+    return jsonify(body)
+
+
+@super_admin.route("/invoices", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def list_invoices():
+    page, size = _page()
+    tenant_id = request.args.get("tenant_id", type=int)
+    return jsonify(billing.invoices_page(tenant_id=tenant_id, status=request.args.get("status") or None, page=page, size=size))
+
+
+@super_admin.route("/invoices/issue", methods=["POST"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def issue_invoices():
+    """Émet les factures arrivées à échéance (aussi fait chaque jour par « flask saas billing »)."""
+    issued = billing.issue_due_invoices(tenant_id=_json().get("tenant_id"))
+    return jsonify({"issued": [billing.invoice_dict(invoice) for invoice in issued], "count": len(issued)})
+
+
+def _invoice(invoice_id):
+    from .models import TenantInvoice
+
+    invoice = db.session.get(TenantInvoice, invoice_id)
+    if invoice is None:
+        raise SaasError("Facture introuvable.", 404)
+    return invoice
+
+
+@super_admin.route("/invoices/<int:invoice_id>", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def get_invoice(invoice_id):
+    return jsonify({**billing.invoice_dict(_invoice(invoice_id)), "issuer": billing.issuer()})
+
+
+@super_admin.route("/invoices/<int:invoice_id>", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def edit_invoice(invoice_id):
+    invoice = billing.set_invoice_status(_invoice(invoice_id), _json(), current_user.id)
+    return jsonify(billing.invoice_dict(invoice))
 
 
 # =====================================================================

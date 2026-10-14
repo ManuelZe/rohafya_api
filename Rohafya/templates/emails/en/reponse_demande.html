@@ -1,0 +1,13 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Response from {{ establishment }}{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Hello,<br><br>{{ message }}{% endcall %}
+{% if response %}
+{% call ui.box() %}<strong>Response from {{ establishment }}:</strong><br>{% for ligne in response.split("\n") %}{{ ligne }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endcall %}
+{% endif %}
+{% if quote_amount is not none %}
+<tr><td style="font-size:16px; line-height:1.5; padding-top:16px;">Quote amount: <strong>{{ "{:,.0f}".format(quote_amount) }} FCFA</strong></td></tr>
+{% endif %}
+{% if has_account %}{{ ui.button(front_url ~ "/connexion", "Open ROHAFYA") }}{% endif %}
+{% endblock %}

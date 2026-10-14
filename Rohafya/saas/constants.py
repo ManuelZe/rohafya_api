@@ -159,3 +159,40 @@ API_KEY_PREFIX = "rohafya_"
 # Identifiant de l'établissement GNU Health historique (créé au premier besoin).
 DEFAULT_GNUHEALTH_SLUG = "pdmd-sante"
 DEFAULT_GNUHEALTH_NAME = "PDMD Santé"
+
+# =====================================================================
+# Abonnements des établissements (grille du site de présentation et du document de vente)
+# =====================================================================
+# Prix en FCFA. `quota` : résultats publiés par mois compris dans la formule (None : sur devis).
+PLAN_ESSENTIEL = "essentiel"
+PLAN_STANDARD = "standard"
+PLAN_AVANCE = "avance"
+PLAN_RESEAU = "reseau"
+PLANS = {
+    PLAN_ESSENTIEL: {"label": "Essentiel", "quota": 500, "monthly": 25_000, "setup": 75_000},
+    PLAN_STANDARD: {"label": "Standard", "quota": 2_000, "monthly": 50_000, "setup": 150_000},
+    PLAN_AVANCE: {"label": "Avancé", "quota": 6_000, "monthly": 100_000, "setup": 300_000},
+    PLAN_RESEAU: {"label": "Réseau ou hôpital", "quota": None, "monthly": 200_000, "setup": 500_000},
+}
+PLAN_ORDER = (PLAN_ESSENTIEL, PLAN_STANDARD, PLAN_AVANCE, PLAN_RESEAU)
+
+SUB_TRIAL = "essai"
+SUB_ACTIVE = "actif"
+SUB_SUSPENDED = "suspendu"
+SUB_ENDED = "resilie"
+SUB_STATUSES = (SUB_TRIAL, SUB_ACTIVE, SUB_SUSPENDED, SUB_ENDED)
+TRIAL_DAYS = 60
+
+# Paiement d'avance (« terme à échoir ») : nombre de mois couverts et nombre de mois payés.
+# Annuel : dix mois payés pour douze (deux mois offerts).
+BILLING_CYCLES = {"mensuel": (1, 1), "trimestriel": (3, 3), "annuel": (12, 10)}
+INVOICE_DUE_DAYS = 15
+INVOICE_ISSUED = "emise"
+INVOICE_PAID = "payee"
+INVOICE_CANCELLED = "annulee"
+INVOICE_STATUSES = (INVOICE_ISSUED, INVOICE_PAID, INVOICE_CANCELLED)
+
+# Alertes de volume (pourcentage de la formule atteint dans le mois). La publication n'est jamais bloquée.
+USAGE_ALERT_THRESHOLDS = (80, 100)
+# Changement de formule : constaté sur trois mois consécutifs, appliqué au trimestre suivant.
+PLAN_CHANGE_MONTHS = 3

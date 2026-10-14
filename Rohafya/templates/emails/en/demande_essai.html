@@ -1,0 +1,20 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}New trial request: {{ request.establishment }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">New trial request: {{ request.establishment }}</td></tr>
+{% call ui.paragraph() %}
+<strong>{{ request.contact_name }}</strong>{% if request.job_title %}, {{ request.job_title }}{% endif %}<br>
+{{ kind_label }} · {{ request.city }}<br>
+WhatsApp / phone: {{ request.phone }}<br>
+Email: {{ request.email }}<br>
+Results per month: {{ volume_label }}<br>
+{% if request.software %}Software: {{ request.software }}<br>{% endif %}
+{% if request.preferred_slot %}Preferred slot: {{ request.preferred_slot }}<br>{% endif %}
+Language: {{ 'English' if request.locale == 'en' else 'French' }}
+{% endcall %}
+{% if request.pain_points %}
+{% call ui.box() %}<strong>What bothers them:</strong><br>{% for ligne in request.pain_points.split("\n") %}{{ ligne }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endcall %}
+{% endif %}
+{{ ui.button(open_url, "See the trial requests") }}
+{% endblock %}

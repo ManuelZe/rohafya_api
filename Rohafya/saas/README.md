@@ -36,7 +36,7 @@ ROHAFYA sert désormais plusieurs établissements (*tenants*). Un patient ou un 
 
 | Rôle | Espace front | Droits |
 | --- | --- | --- |
-| `SuperAdmin` (ou `Admin` historique) | `/super-admin` | Tous les établissements, leurs administrateurs, leurs clés d'API, tous les comptes et leurs droits, les notifications aux établissements, le journal global |
+| `SuperAdmin` (ou `Admin` historique) | `/super-admin` | Tous les établissements, leurs administrateurs, leurs clés d'API, tous les comptes et leurs droits, les notifications aux établissements, les demandes d'essai du site, le journal global |
 | `EstablishmentAdmin` + appartenance (`saas_tenant_members`) | `/admin` | Uniquement ses établissements : patients, rattachements, QR codes, médecins, notifications à ses patients et médecins, données reçues, réglages, journal |
 | `Patient` (permissions `patients.*`) | `/patients` | Les résultats de tous les établissements rattachés sont agrégés ; envoie prescriptions, pré-enregistrements et requêtes à l'établissement de son choix |
 | `Doctor` (permissions `doctors.*`) | `/doctors` | Résultats partagés ; envoie prescriptions (pour un patient), pré-enregistrements de patients et requêtes à l'établissement de son choix |
@@ -207,6 +207,26 @@ Réglés par le super-administrateur, compte par compte (`saas_account_rights`).
 
 Un numéro n'appartient qu'à un seul compte patient ou médecin (`accounts/phones.py`). Les numéros sont comparés sur leurs chiffres, sans l'indicatif 237 ; un numéro déjà utilisé est refusé avec un message explicite (409). Le téléphone secondaire est facultatif : vide, il est enregistré `NULL` (deux chaînes vides seraient en conflit sur la contrainte d'unicité).
 
+## Langue de l'interface
+
+Chaque compte choisit le français ou l'anglais (sélecteur FR / EN de son espace). Le choix est enregistré par compte dans `saas_user_preferences` (`locale` : `fr` par défaut) et suit l'utilisateur d'un appareil à l'autre.
+
+- `GET /saas/me` renvoie `locale` ;
+- `PUT /saas/me/preferences` avec `{"locale": "fr" | "en"}` (connexion exigée ; autre valeur : 400).
+
+L'API répond toujours en français ; le front traduit ses messages (dictionnaire `src/app/shared/i18n/en/api.ts`). Un message d'API ajouté ou modifié doit donc y être ajouté pour apparaître en anglais.
+
+## Demandes d'essai (site de présentation)
+
+Le formulaire « Demander un essai » du site (`/intro`, `/en`) envoie la demande d'un établissement :
+
+- `POST /saas/public/trial-requests` (sans connexion) : nom, fonction, établissement, ville, téléphone, e-mail, type (`laboratoire`, `imagerie`, `centre_medical`, `clinique`, `hopital`, `reseau`, `autre`), volume mensuel, logiciel, difficultés, créneau, accord (`consent`, obligatoire), langue du site (`locale`). Réponse 201 ;
+- protections : champ piège `website` (un robot qui le remplit reçoit 201 mais rien n'est enregistré), 3 demandes par e-mail et par jour, 30 par heure au total (429) ;
+- chaque demande prévient les super-administrateurs (notification et e-mail `emails/demande_essai.html`, lien vers `/super-admin/demandes-essai`) ;
+- suivi par le super-administrateur : `GET /saas/super/trial-requests?status=&page=` (avec le nombre de demandes par statut, `counts`) et `PUT /saas/super/trial-requests/<id>` avec `{"status": "nouvelle" | "contactee" | "essai" | "close", "note": "..."}` (note interne de 2 000 caractères au plus, inscrite au journal `trial.updated`).
+
+Les demandes sont dans `saas_trial_requests` (créée au démarrage, comme les autres tables `saas_*`).
+
 ## Suppression d'un établissement
 
 `DELETE /saas/super/tenants/<id>` avec `{"confirm_slug": "<identifiant>"}` (super-administrateur). Efface ses données reçues, imports PDF, demandes reçues (adressage et contenu), rattachements, QR codes et administrateurs ; les comptes ROHAFYA des patients et médecins sont conservés, le journal est gardé (marqué `etablissement_supprime`). Refusé pour l'établissement GNU Health, qui peut seulement être suspendu.
@@ -217,7 +237,8 @@ Un numéro n'appartient qu'à un seul compte patient ou médecin (`accounts/phon
 - **Médecin** : les résultats partagés par ses patients, quel que soit l'établissement. Le module commissions n'apparaît que si un établissement GNU Health l'active.
 - **Patient et médecin** : chaque prescription, pré-enregistrement ou requête affiche son établissement, son statut et la réponse reçue (montant du devis en FCFA).
 - **Administrateur d'établissement** : page « Demandes » (`/admin/demandes`), pour répondre ; page « Notifications » (`/admin/notifications`) : reçues, envoi aux patients et médecins, historique.
-- **Tous** : les notifications reçues des consoles, dans l'espace de chacun et par e-mail.
+- **Super-administrateur** : page « Demandes d'essai » (`/super-admin/demandes-essai`), pour suivre les établissements qui ont demandé une démonstration.
+- **Tous** : les notifications reçues des consoles, dans l'espace de chacun et par e-mail ; l'interface en français ou en anglais, au choix de chaque compte.
 
 ## Tests
 
@@ -227,9 +248,10 @@ Rohafya/envDoc/bin/python Rohafya/tests/test_demandes.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_notifications.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_droits.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_telephones.py
+Rohafya/envDoc/bin/python Rohafya/tests/test_essais.py
 ```
 
-`test_notifications.py` couvre les envois des deux consoles (destinataires, sélection, cloisonnement, e-mails, historique), les notifications de l'utilisateur connecté et le refus des anciennes routes sur les notifications d'un autre compte. `test_droits.py` couvre les droits d'impression et de partage, et les messages de connexion (e-mail inconnu). `test_telephones.py` couvre l'unicité des numéros.
+`test_notifications.py` couvre les envois des deux consoles (destinataires, sélection, cloisonnement, e-mails, historique), les notifications de l'utilisateur connecté et le refus des anciennes routes sur les notifications d'un autre compte. `test_droits.py` couvre les droits d'impression et de partage, et les messages de connexion (e-mail inconnu). `test_telephones.py` couvre l'unicité des numéros. `test_essais.py` couvre la langue des comptes et les demandes d'essai (validation, champ piège, limites, notification des super-administrateurs, suivi).
 
 `test_demandes.py` couvre les envois des patients, des médecins et des visiteurs, le cloisonnement entre établissements, les réponses et notifications, la reprise des envois antérieurs par `flask saas init` et la suppression d'un établissement.
 

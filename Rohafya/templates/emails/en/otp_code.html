@@ -1,0 +1,13 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Your ROHAFYA sign-in code{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Here is your ROHAFYA sign-in code:{% endcall %}
+<tr>
+    <td align="center" style="padding-bottom:20px;">
+        <div style="display:inline-block; font-size:32px; letter-spacing:8px; font-weight:700; color:#0c4562; background:#ecfdf5; border-radius:10px; padding:14px 24px;">{{ code }}</div>
+    </td>
+</tr>
+{% call ui.paragraph() %}This code is valid for {{ minutes }} minutes and can only be used once. If you did not try to sign in, simply ignore this message: your account remains protected.{% endcall %}
+{% call ui.note() %}Message sent to {{ email }} by ROHAFYA — {{ front_url }}{% endcall %}
+{% endblock %}

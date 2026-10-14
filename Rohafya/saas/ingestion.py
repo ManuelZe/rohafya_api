@@ -5,16 +5,19 @@ Le format « ROHAFYA » est exactement celui des données de la démo du front-e
 une imagerie ceux d'ExamenImagerie, etc., plus `local_ref` (le dossier du patient dans
 l'établissement) et, en option, `details` (valeurs mesurées) ou `products` (lignes de facture).
 """
+import logging
+
 from sqlalchemy import select
 
 from Rohafya import db
 from .constants import CODE_FIELD, KIND_INVOICE, LINK_ACTIVE, RECORD_KINDS
 from .models import PatientLink, TenantPatient, TenantRecord
+from . import billing, i18n
 from .normalization import normalize_details, normalize_payload
 from .services import SaasError, normalize_email, notify_user, now, parse_datetime
 
+log = logging.getLogger(__name__)
 PATIENT_FIELDS = ("first_name", "last_name", "email", "phone", "birth_date", "gender")
-KIND_LABELS = {"laboratoire": "de laboratoire", "imagerie": "d'imagerie", "exploration": "d'exploration fonctionnelle"}
 
 
 def _text(value, limit=200):
@@ -91,6 +94,8 @@ def upsert_record(tenant, kind, data, source):
     record.validated_at = validated_at
     record.source = source
     record.updated_at = now()
+    if created:
+        billing.record_usage(tenant.id, kind, code)
     return record, created
 
 
@@ -110,11 +115,22 @@ def notify_new_results(tenant, records):
             select(PatientLink).filter_by(tenant_id=tenant.id, local_ref=record.local_ref, status=LINK_ACTIVE)
         ).scalar_one_or_none()
         if link and link.patient:
+            locale = i18n.user_locale(link.patient.user_id)
             notify_user(
                 link.patient.user_id,
-                "Nouveau résultat disponible",
-                f"{tenant.display_name} a publié un résultat {KIND_LABELS.get(record.kind, '')} ({record.code}).",
+                "result.new.title",
+                "result.new.message",
+                establishment=tenant.display_name,
+                kind=i18n.text(f"result.kind.{record.kind}", locale),
+                code=record.code,
             )
+    # Volume du mois : alerte à 80 % puis à 100 % de la formule (jamais de blocage).
+    if any(record.kind != KIND_INVOICE for record in records):
+        try:
+            billing.check_usage_alerts(tenant)
+        except Exception as exc:  # une alerte ne doit jamais faire échouer l'envoi
+            db.session.rollback()
+            log.error("Alerte de volume impossible pour %s : %s", tenant.slug, exc)
 
 
 def ingest_batch(tenant, kind, items, source):

@@ -1,0 +1,9 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}{{ establishment }}: {{ percent }}% of the plan volume{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">{{ percent }}% of your plan volume</td></tr>
+{% call ui.paragraph() %}Hello,<br><br><strong>{{ establishment }}</strong> has published <strong>{{ count }}</strong> results this month, out of <strong>{{ quota }}</strong> included in the {{ plan }} plan.{% endcall %}
+{% call ui.paragraph() %}Nothing changes for your patients: publishing continues as usual. If this volume holds for three months in a row, the matching plan will apply from the next quarter; we will suggest it to you first.{% endcall %}
+{{ ui.button(open_url, "See the subscription") }}
+{% endblock %}

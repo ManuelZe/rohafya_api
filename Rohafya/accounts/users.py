@@ -73,7 +73,7 @@ def send_mail():
         "password": password
     }
 
-    subject = "PARAMETRES DE CONNEXION A L'APPLICATION"
+    subject = "mail.credentials"
     template_html = "emails/connexion_email.html"
     
     try:

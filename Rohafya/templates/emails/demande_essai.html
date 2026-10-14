@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Demande d'essai</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f6fa; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6fa; padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px; background:#ffffff; border-radius:12px; padding:32px 28px;">
+                    <tr><td style="font-size:22px; font-weight:700; color:#047857; padding-bottom:16px;">ROHAFYA</td></tr>
+                    <tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Nouvelle demande d'essai : {{ request.establishment }}</td></tr>
+                    <tr>
+                        <td style="font-size:15px; line-height:1.6;">
+                            <strong>{{ request.contact_name }}</strong>{% if request.job_title %}, {{ request.job_title }}{% endif %}<br>
+                            {{ kind_label }} · {{ request.city }}<br>
+                            WhatsApp / téléphone : {{ request.phone }}<br>
+                            E-mail : {{ request.email }}<br>
+                            Résultats par mois : {{ volume_label }}<br>
+                            {% if request.software %}Logiciel : {{ request.software }}<br>{% endif %}
+                            {% if request.preferred_slot %}Créneau souhaité : {{ request.preferred_slot }}<br>{% endif %}
+                            Langue : {{ 'anglais' if request.locale == 'en' else 'français' }}
+                        </td>
+                    </tr>
+                    {% if request.pain_points %}
+                    <tr>
+                        <td style="font-size:15px; line-height:1.5; padding:14px 16px; margin-top:12px; background:#ecfdf5; border-left:4px solid #047857; border-radius:6px;">
+                            <strong>Ce qui le gêne :</strong><br>
+                            {% for ligne in request.pain_points.split("\n") %}{{ ligne }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td align="center" style="padding-top:24px;">
+                            <a href="{{ open_url }}" style="display:inline-block; background:#047857; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px;">Voir les demandes d'essai</a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

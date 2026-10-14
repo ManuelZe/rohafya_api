@@ -1,0 +1,8 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}ROHAFYA administrator access{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Hello {{ first_name }},<br><br>You are now an administrator of <strong>{{ establishment }}</strong> on ROHAFYA: you can follow linked patients, generate their QR codes, and manage the facility's doctors and settings.{% endcall %}
+{% call ui.paragraph() %}To sign in, open ROHAFYA, choose <strong>“Code by email”</strong> and enter <strong>{{ email }}</strong>: you will receive a one-time code. You will then be asked to set up two-step verification with an authenticator app.{% endcall %}
+{{ ui.button(front_url ~ "/connexion", "Open ROHAFYA") }}
+{% endblock %}

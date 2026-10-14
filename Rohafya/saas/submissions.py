@@ -26,10 +26,10 @@ from .constants import (
     SUBMISSION_RECEIVED,
     SUBMISSION_REFUSED,
     SUBMISSION_REQUEST,
-    SUBMISSION_STATUS_LABELS,
     SUBMISSION_STATUSES,
     SUPER_ADMIN_ROLES,
 )
+from . import i18n
 from .models import Submission, Tenant, TenantMember
 from .services import SaasError, audit, can_admin_tenant, doctor_of_user, notify_user, now, patient_of_user, send_mail
 
@@ -135,14 +135,15 @@ def tenant_recipients(tenant):
 
 def notify_tenant(submission, author_name):
     tenant = submission.tenant
-    label = SUBMISSION_KIND_LABELS[submission.kind]
+    kind = submission.kind
     users, emails = tenant_recipients(tenant)
-    title = f"Nouvelle {label}" if submission.kind != SUBMISSION_PRE_REGISTRATION else "Nouveau pré-enregistrement"
     for user in users:
-        notify_user(user.id, title, f"{author_name} a envoyé une {label} à {tenant.display_name}.")
+        notify_user(user.id, f"submission.new.{kind}", f"submission.sent.{kind}", author=author_name, establishment=tenant.display_name)
     for email in dict.fromkeys(emails):
-        send_mail(email, f"ROHAFYA · {title} pour {tenant.display_name}", "emails/nouvelle_demande.html",
-                  establishment=tenant.display_name, kind_label=label, author=author_name, admin_path="/admin/demandes")
+        locale = i18n.email_locale(email)
+        send_mail(email, "mail.new_submission", "emails/nouvelle_demande.html", locale=locale,
+                  title=i18n.text(f"submission.new.{kind}", locale), establishment=tenant.display_name,
+                  kind_label=i18n.text(f"kind.{kind}", locale), author=author_name, admin_path="/admin/demandes")
 
 
 # =====================================================================
@@ -346,18 +347,21 @@ def _sync_legacy_flags(submission, item, actor):
 def _notify_author(submission, item):
     if submission.status not in (SUBMISSION_IN_PROGRESS, SUBMISSION_DONE, SUBMISSION_REFUSED) and not submission.response:
         return
-    label = SUBMISSION_KIND_LABELS[submission.kind]
-    status_label = SUBMISSION_STATUS_LABELS[submission.status].lower()
     establishment = submission.tenant.display_name
-    message = f"Votre {label} envoyée à {establishment} est {status_label}."
-    if submission.kind == SUBMISSION_PRE_REGISTRATION:
-        message = f"Votre pré-enregistrement envoyé à {establishment} est {status_label}."
+    gender = "m" if submission.kind == SUBMISSION_PRE_REGISTRATION else "f"
+
+    def answer(locale):
+        status = i18n.text(f"status.{gender}.{submission.status}", locale)
+        return i18n.text(f"submission.answer.{submission.kind}", locale, establishment=establishment, status=status)
+
     if submission.author_id:
-        notify_user(submission.author_id, f"Réponse de {establishment}", message)
+        notify_user(submission.author_id, i18n.text("submission.answer.title", i18n.user_locale(submission.author_id),
+                                                    establishment=establishment), answer(i18n.user_locale(submission.author_id)))
     email = author_email(submission, item)
     if email:
-        send_mail(email, f"ROHAFYA · Réponse de {establishment}", "emails/reponse_demande.html",
-                  establishment=establishment, message=message, response=submission.response,
+        locale = i18n.user_locale(submission.author_id) if submission.author_id else i18n.email_locale(email)
+        send_mail(email, "mail.submission_answer", "emails/reponse_demande.html", locale=locale,
+                  establishment=establishment, message=answer(locale), response=submission.response,
                   quote_amount=submission.quote_amount, has_account=bool(submission.author_id))
 
 

@@ -1,0 +1,10 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:13px; color:#4b5563; padding-bottom:18px;">Message from {{ "the ROHAFYA team" if sender == "l'équipe ROHAFYA" else sender }}</td></tr>
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">{{ title }}</td></tr>
+{% call ui.paragraph() %}Hello{% if name %} {{ name }}{% endif %},<br><br>{% for ligne in message.split("\n") %}{{ ligne }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endcall %}
+{{ ui.button(open_url, "See my notifications") }}
+{% call ui.note() %}You are receiving this message because your ROHAFYA account is linked to {{ establishment }}. It is also available in your notifications.{% endcall %}
+{% endblock %}

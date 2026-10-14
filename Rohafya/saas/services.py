@@ -48,6 +48,7 @@ from .constants import (
 )
 from .models import AuditLog, EmailOtp, LinkToken, PatientLink, PractitionerLink, Tenant, TenantMember, TenantRecord
 from .normalization import RESULT_FIELDS, normalize_details, normalize_payload
+from . import i18n
 
 log = logging.getLogger(__name__)
 
@@ -610,8 +611,9 @@ def set_link_status(link, status, actor_id):
     if status == LINK_ACTIVE and link.patient:
         notify_user(
             link.patient.user_id,
-            "Établissement rattaché",
-            f"Votre dossier de {link.tenant.display_name} est désormais accessible dans ROHAFYA.",
+            "link.active.title",
+            "link.active.message",
+            establishment=link.tenant.display_name,
         )
 
 
@@ -652,7 +654,7 @@ def issue_email_otp(email, purpose="login"):
 
     sent = send_mail(
         email,
-        "Votre code de connexion ROHAFYA",
+        "mail.otp",
         "emails/otp_code.html",
         code=code,
         minutes=OTP_TTL_MINUTES,
@@ -693,10 +695,14 @@ def verify_email_otp(email, code, consume=True):
 # Notifications, e-mails, audit
 # =====================================================================
 
-def notify_user(user_id, title, message):
+def notify_user(user_id, title, message, **params):
+    """Notification dans l'espace de l'utilisateur, dans sa langue (`title` et `message` : clés de saas/i18n.py ou textes)."""
     if not user_id:
         return
     try:
+        locale = i18n.user_locale(user_id)
+        title = i18n.text(title, locale, **params)
+        message = i18n.text(message, locale, **params)
         types = db.session.execute(select(Notifications_Type).filter_by(name="INFOS")).scalar_one_or_none()
         if not types:
             types = Notifications_Type(name="INFOS", description="Informations Type Of All Notifications.")
@@ -711,11 +717,14 @@ def notify_user(user_id, title, message):
         log.error("Notification impossible pour l'utilisateur %s : %s", user_id, exc)
 
 
-def send_mail(to, subject, template, **context):
+def send_mail(to, subject, template, locale=None, **context):
+    """E-mail dans la langue du destinataire : `subject` est une clé de saas/i18n.py (ou un texte déjà rédigé),
+    `template` est remplacé par sa version anglaise (emails/en/…) quand elle existe."""
     try:
+        locale = locale if locale in i18n.LOCALES else i18n.email_locale(to)
         mail = Mail(current_app)
-        message = Message(subject, recipients=[to], sender=current_app.config.get("MAIL_DEFAULT_SENDER"))
-        message.html = render_template(template, front_url=front_url(), **context)
+        message = Message(i18n.text(subject, locale, **context), recipients=[to], sender=current_app.config.get("MAIL_DEFAULT_SENDER"))
+        message.html = render_template(i18n.template_for(template, locale), front_url=front_url(), locale=locale, **context)
         mail.send(message)
         return True
     except Exception as exc:

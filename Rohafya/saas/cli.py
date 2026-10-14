@@ -2,6 +2,7 @@
 
     flask --app Rohafya saas init
     flask --app Rohafya saas create-superadmin admin@exemple.com --first-name Jean --last-name Dupont
+    flask --app Rohafya saas billing        # chaque jour (cron) : factures dues, rappels de fin d'essai
 """
 import click
 from flask.cli import AppGroup
@@ -17,6 +18,7 @@ from .services import (
     grant_default_permissions,
     sync_permissions,
 )
+from . import billing
 from .submissions import attach_orphans, relax_patient_columns
 
 saas_cli = AppGroup("saas", help="Installation et administration du mode SaaS.")
@@ -40,6 +42,7 @@ def init(sans_permissions):
     tenant = default_gnuhealth_tenant()
     relax_patient_columns()
     attached = attach_orphans(tenant)
+    subscriptions, counted = billing.backfill()
     click.echo(f"Rôles {ROLE_SUPER_ADMIN} et {ROLE_TENANT_ADMIN} prêts.")
     click.echo(f"Permissions : {created} créée(s).")
     for role_name, count in added.items():
@@ -50,6 +53,17 @@ def init(sans_permissions):
         )
     )
     click.echo(f"Établissement GNU Health : {tenant.name} (id {tenant.id}, identifiant {tenant.slug}).")
+    click.echo(f"Abonnements créés : {subscriptions} ; résultats déjà reçus comptés dans le volume : {counted}.")
+
+
+@saas_cli.command("billing")
+def billing_daily():
+    """Tâche quotidienne : émet les factures arrivées à échéance et rappelle les fins d'essai."""
+    invoices = billing.issue_due_invoices()
+    reminders = billing.trial_reminders()
+    for invoice in invoices:
+        click.echo(f"Facture {invoice.number} · {invoice.establishment} · {invoice.total} FCFA")
+    click.echo(f"{len(invoices)} facture(s) émise(s), {reminders} rappel(s) de fin d'essai.")
 
 
 @saas_cli.command("create-superadmin")
