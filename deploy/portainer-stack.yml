@@ -26,6 +26,15 @@ services:
       ROHAFYA_FRONT_ORIGINS: ${ROHAFYA_FRONT_ORIGINS:-https://rohafya.com,https://preprod.rohafya.com}
       ROHAFYA_PDF_IMPORT_ENABLED: ${ROHAFYA_PDF_IMPORT_ENABLED:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Double authentification obligatoire pour les administrateurs (false : facultative, déconseillé).
+      ROHAFYA_ADMIN_MFA_REQUIRED: ${ROHAFYA_ADMIN_MFA_REQUIRED:-true}
+      # Mentions imprimées sur les factures des établissements (voir docs/DEPLOIEMENT_DOCKER.md, § 15).
+      ROHAFYA_INVOICE_NAME: ${ROHAFYA_INVOICE_NAME:-ROHAFYA}
+      ROHAFYA_INVOICE_ADDRESS: ${ROHAFYA_INVOICE_ADDRESS:-}
+      ROHAFYA_INVOICE_RCCM: ${ROHAFYA_INVOICE_RCCM:-}
+      ROHAFYA_INVOICE_TAX_ID: ${ROHAFYA_INVOICE_TAX_ID:-}
+      ROHAFYA_INVOICE_CONTACT: ${ROHAFYA_INVOICE_CONTACT:-}
+      ROHAFYA_INVOICE_PAYMENT: ${ROHAFYA_INVOICE_PAYMENT:-}
       # Un seul proxy de confiance devant l'API : Nginx Proxy Manager.
       ROHAFYA_PROXIES: "1"
       # Pas de lecture directe de GNU Health : les données arrivent par le connecteur.

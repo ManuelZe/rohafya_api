@@ -291,6 +291,7 @@ contenu de [`deploy/stack.env.exemple`](../deploy/stack.env.exemple), puis compl
 | `NPM_NETWORK` | nom relevé au [§ 6.2](#62-repérer-le-réseau-de-nginx-proxy-manager) |
 | `ROHAFYA_VERSION` | `latest` en préproduction, une version figée (`1.0.0`) en production |
 | `ROHAFYA_FRONT_URL`, `ROHAFYA_FRONT_ORIGINS` | adresses du front ([§ 10.1](#101-front-end)) |
+| `ROHAFYA_INVOICE_*` | mentions des factures des établissements ([§ 15](#15-référence-des-variables-denvironnement)) |
 
 Une variable obligatoire vide bloque le déploiement avec un message explicite, par exemple
 `required variable ROHAFYA_JWT_SECRET_KEY is missing a value`.
@@ -505,7 +506,16 @@ laisse en place ; l'ancienne version les ignore.
 | Créer ou promouvoir un super-administrateur | `flask saas create-superadmin email@domaine --first-name … --last-name …` |
 | Rôles, permissions (nouvelles et par défaut des rôles Patient / Doctor), établissement GNU Health (idempotent) | `flask saas init` |
 | Idem, sans toucher aux permissions des rôles | `flask saas init --sans-permissions` |
+| Factures dues et rappels de fin d'essai (chaque jour, voir ci-dessous) | `flask saas billing` |
 | Shell PostgreSQL | `docker exec -it rohafya-db psql -U rohafya -d rohafya` (SSH) |
+
+**Tâche quotidienne de facturation.** À planifier une fois sur le serveur (`crontab -e` en SSH), par exemple chaque jour à 6 h :
+
+```
+0 6 * * * docker exec rohafya-api flask --app Rohafya saas billing >> /var/log/rohafya-billing.log 2>&1
+```
+
+Elle émet les factures arrivées à échéance et prévient les super-administrateurs des fins d'essai. Le bouton « Émettre les factures dues » de la console super-administrateur fait la même chose à la demande.
 
 ### 11.4 Sauvegardes
 
@@ -687,6 +697,13 @@ Encrypt par Nginx Proxy Manager, envoi réel d'e-mails, exécution du workflow G
 | `ROHAFYA_FRONT_ORIGINS` | | `https://rohafya.com,https://preprod.rohafya.com` | Origines CORS autorisées |
 | `ROHAFYA_PDF_IMPORT_ENABLED` | | `false` | Ouvre l'import de comptes rendus PDF |
 | `ANTHROPIC_API_KEY` | | vide | Lecture des PDF par IA. Nécessite aussi le paquet `anthropic` dans `docker/requirements.txt` |
+| `ROHAFYA_ADMIN_MFA_REQUIRED` | | `true` | Double authentification obligatoire pour les administrateurs |
+| `ROHAFYA_INVOICE_NAME` | conseillé | `ROHAFYA` | Nom ou raison sociale de l'émetteur des factures (celui de votre immatriculation) |
+| `ROHAFYA_INVOICE_ADDRESS` | conseillé | vide | Adresse de l'émetteur (ville, quartier, boîte postale) |
+| `ROHAFYA_INVOICE_RCCM` | conseillé | vide | Numéro d'immatriculation au registre du commerce (RCCM), sur l'attestation d'immatriculation |
+| `ROHAFYA_INVOICE_TAX_ID` | conseillé | vide | Numéro d'identifiant unique (NIU), sur l'attestation d'immatriculation fiscale |
+| `ROHAFYA_INVOICE_CONTACT` | | vide | Téléphone ou e-mail pour les questions de facturation |
+| `ROHAFYA_INVOICE_PAYMENT` | conseillé | vide | Comment payer : numéros Mobile Money (MTN, Orange), coordonnées bancaires |
 | `ROHAFYA_IMAGE` | | `ghcr.io/manuelze/rohafya-api` | Image de l'API |
 | `ROHAFYA_VERSION` | | `latest` | Étiquette de l'image |
 | `ROHAFYA_NOM` | | `rohafya` | Préfixe des conteneurs. Une 2ᵉ stack (préproduction) prend un autre préfixe |
