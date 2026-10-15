@@ -166,6 +166,8 @@ TEXTS = {
         "fr": "{name} ({email}) demande la suppression de son compte ROHAFYA.",
         "en": "{name} ({email}) asks for their ROHAFYA account to be deleted.",
     },
+    "deletion.refused.title": {"fr": "Demande de suppression refusée", "en": "Deletion request declined"},
+    "deletion.refused.message": {"fr": "Votre compte n'a pas été supprimé. Motif : {reason}", "en": "Your account was not deleted. Reason: {reason}"},
     "mail.deletion_received": {"fr": "ROHAFYA · Votre demande de suppression est enregistrée", "en": "ROHAFYA · Your deletion request has been recorded"},
 }
 

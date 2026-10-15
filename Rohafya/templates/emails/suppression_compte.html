@@ -1,0 +1,8 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Votre demande de suppression est enregistrée{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Bonjour{% if name %} {{ name }}{% endif %},<br><br>Nous avons bien reçu votre demande de suppression du compte ROHAFYA <strong>{{ email }}</strong>. Elle sera traitée sous 30 jours.{% endcall %}
+{% call ui.paragraph() %}Le compte sera désactivé et vos informations personnelles effacées de ROHAFYA. Vos résultats et factures restent conservés par les établissements qui les ont produits&nbsp;: adressez-vous à eux pour ces documents.{% endcall %}
+{% call ui.note() %}Vous pouvez annuler la demande tant qu'elle n'est pas traitée, depuis la page « Confidentialité » de votre espace. Loi n° 2024/017 du 23 décembre 2024 relative à la protection des données à caractère personnel.{% endcall %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Double authentification {{ 'activée' if enabled else 'désactivée' }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Double authentification {{ 'activée' if enabled else 'désactivée' }}</td></tr>
+{% call ui.paragraph() %}Bonjour{% if name %} {{ name }}{% endif %},<br><br>
+{% if enabled %}La double authentification vient d'être activée sur votre compte ROHAFYA : chaque connexion demandera désormais le code de votre application d'authentification. Gardez vos codes de secours en lieu sûr.
+{% else %}La double authentification vient d'être désactivée sur votre compte ROHAFYA.{% endif %}{% endcall %}
+{% call ui.box() %}Ce n'est pas vous&nbsp;? Changez votre mot de passe et prévenez immédiatement votre établissement ou l'équipe ROHAFYA.{% endcall %}
+{{ ui.button(front_url ~ "/connexion", "Ouvrir ROHAFYA") }}
+{% endblock %}

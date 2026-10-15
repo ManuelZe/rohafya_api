@@ -96,7 +96,7 @@ def get_results(exam_type, exam_code, patient_federation_id):
 
     record, record_tenant = _external_exam(exam_type, exam_code, rohafya_patient)
     if record is not None:
-        audit("result.viewed", tenant_id=record_tenant.id, user_id=current_user.id, target=exam_code)
+        audit("result.viewed", tenant_id=record_tenant.id, user_id=current_user.id, target=exam_code, details={"local_ref": record.local_ref})
         return jsonify([serialize_record(record, record_tenant, rohafya_patient)])
 
     patient = _tryton_patient(patient_federation_id, rohafya_patient)

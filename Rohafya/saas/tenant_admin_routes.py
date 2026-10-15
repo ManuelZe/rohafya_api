@@ -351,6 +351,8 @@ def patient_detail(tenant_id, local_ref):
     if not known and not legacy:
         raise SaasError("Dossier introuvable dans cet établissement.", 404)
 
+    # Visible par le patient dans l'historique des accès à son dossier.
+    audit("patient.viewed", tenant_id=tenant.id, user_id=current_user.id, target=local_ref)
     link = db.session.execute(select(PatientLink).filter_by(tenant_id=tenant.id, local_ref=local_ref)).scalar_one_or_none()
     records = db.session.execute(
         select(TenantRecord).filter_by(tenant_id=tenant.id, local_ref=local_ref).order_by(TenantRecord.validated_at.desc())

@@ -1,0 +1,8 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Your deletion request has been recorded{% endblock %}
+{% block content %}
+{% call ui.paragraph() %}Hello{% if name %} {{ name }}{% endif %},<br><br>We have received your request to delete the ROHAFYA account <strong>{{ email }}</strong>. It will be processed within 30 days.{% endcall %}
+{% call ui.paragraph() %}The account will be deactivated and your personal information erased from ROHAFYA. Your results and invoices remain kept by the facilities that produced them: contact them about these documents.{% endcall %}
+{% call ui.note() %}You can cancel the request until it is processed, from the “Privacy” page of your space. Cameroon Law No. 2024/017 of 23 December 2024 on the protection of personal data.{% endcall %}
+{% endblock %}

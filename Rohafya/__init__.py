@@ -67,7 +67,7 @@ def create_app():
         app, 
         origins=[*front_origins(), "http://localhost:8081"], 
         supports_credentials=True, 
-        allow_headers=["Content-Type", "Authorization"]
+        allow_headers=["Content-Type", "Authorization", "Accept-Language"]
     )
 
     app.config['TRYTON_CONFIG'] = os.environ.get('TRYTON_CONFIG', '/home/gnuhealth/gnuhealth/tryton/server/config/trytond.conf')
@@ -135,6 +135,8 @@ def create_app():
     # Les anciens noms EDEN_* sont encore lus pour ne pas casser les conteneurs existants.
     app.config['ROHAFYA_FRONT_URL'] = os.environ.get('ROHAFYA_FRONT_URL') or os.environ.get('EDEN_FRONT_URL') or "https://rohafya.com"
     # Import des résultats par PDF : fermé tant que ROHAFYA_PDF_IMPORT_ENABLED ne vaut pas « true » (disponible prochainement).
+    # Double authentification obligatoire pour les administrateurs (désactivable : ROHAFYA_ADMIN_MFA_REQUIRED=false).
+    app.config['ROHAFYA_ADMIN_MFA_REQUIRED'] = (os.environ.get('ROHAFYA_ADMIN_MFA_REQUIRED', 'true')).strip().lower() in ('1', 'true', 'oui', 'yes')
     app.config['ROHAFYA_PDF_IMPORT_ENABLED'] = (os.environ.get('ROHAFYA_PDF_IMPORT_ENABLED') or os.environ.get('EDEN_PDF_IMPORT_ENABLED', '')).strip().lower() in ('1', 'true', 'oui', 'yes')
 
     with app.app_context():

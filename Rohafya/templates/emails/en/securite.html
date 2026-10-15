@@ -1,0 +1,11 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as ui %}
+{% block title %}Two-step verification turned {{ 'on' if enabled else 'off' }}{% endblock %}
+{% block content %}
+<tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Two-step verification turned {{ 'on' if enabled else 'off' }}</td></tr>
+{% call ui.paragraph() %}Hello{% if name %} {{ name }}{% endif %},<br><br>
+{% if enabled %}Two-step verification has just been turned on for your ROHAFYA account: every sign-in will now ask for the code from your authenticator app. Keep your recovery codes somewhere safe.
+{% else %}Two-step verification has just been turned off for your ROHAFYA account.{% endif %}{% endcall %}
+{% call ui.box() %}Wasn't you? Change your password and tell your facility or the ROHAFYA team right away.{% endcall %}
+{{ ui.button(front_url ~ "/connexion", "Open ROHAFYA") }}
+{% endblock %}

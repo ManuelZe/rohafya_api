@@ -37,7 +37,7 @@ from .services import (
 from .rights import admin_rights_view, rights_summaries, update_rights
 from . import notifications as notif
 from .trials import trial_requests_page, update_trial_request
-from . import billing
+from . import billing, privacy, security
 from .tenant_admin_routes import tenant_stats
 
 super_admin = Blueprint("super_admin", __name__, url_prefix="/saas/super")
@@ -404,6 +404,7 @@ def _user_view(user, memberships, rights=None):
         "patient_id": user.patients.id if user.patients else None,
         "doctor_id": user.doctor.id if user.doctor else None,
         "rights": (rights or {}).get(user.id, []),
+        "mfa_enabled": security.mfa_enabled(user),
     }
 
 
@@ -566,6 +567,41 @@ def edit_trial_request(request_id):
     trial = update_trial_request(request_id, _json())
     audit("trial.updated", user_id=current_user.id, target=trial.establishment, details={"status": trial.status}, commit=True)
     return jsonify(trial.to_dict())
+
+
+# =====================================================================
+# Sécurité des comptes et données personnelles
+# =====================================================================
+
+@super_admin.route("/users/<int:user_id>/mfa-reset", methods=["PUT"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def reset_mfa(user_id):
+    """Téléphone perdu : supprime la double authentification ; elle sera reconfigurée à la prochaine connexion."""
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise SaasError("Compte introuvable.", 404)
+    if user.id == current_user.id:
+        raise SaasError("Un autre super-administrateur doit réinitialiser votre double authentification.", 400)
+    security.disable(user)
+    audit("mfa.reset", user_id=current_user.id, target=user.email)
+    return {"message": f"Double authentification réinitialisée pour {user.email}.", "mfa_enabled": False}
+
+
+@super_admin.route("/deletion-requests", methods=["GET"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def list_deletion_requests():
+    page, size = _page()
+    return jsonify(privacy.deletion_requests_page(request.args.get("status") or None, page, size))
+
+
+@super_admin.route("/deletion-requests/<int:request_id>", methods=["POST"])
+@cross_origin(supports_credentials=True)
+@super_admin_required
+def process_deletion_request(request_id):
+    """{"decision": "anonymize" | "refuse", "note": "..."} : anonymise le compte ou refuse (motif obligatoire)."""
+    return jsonify(privacy.process_deletion(request_id, _json(), current_user).to_dict())
 
 
 # =====================================================================

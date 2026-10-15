@@ -10,6 +10,12 @@ from .models import Tenant
 from .services import SaasError, can_admin_tenant, is_super_admin, tenant_from_api_key
 
 
+def console_access_problem(user):
+    from .security import console_access_problem as check
+
+    return check(user)
+
+
 def login_needed(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
@@ -27,6 +33,9 @@ def super_admin_required(view):
     def wrapper(*args, **kwargs):
         if not is_super_admin(current_user):
             return {"message": "Accès réservé au super-administrateur."}, 403
+        problem = console_access_problem(current_user)
+        if problem:
+            return problem
         return view(*args, **kwargs)
 
     return wrapper
@@ -44,6 +53,9 @@ def tenant_admin_required(view):
             return {"message": "Établissement introuvable."}, 404
         if not can_admin_tenant(current_user, tenant.id):
             return {"message": "Vous n'administrez pas cet établissement."}, 403
+        problem = console_access_problem(current_user)
+        if problem:
+            return problem
         g.tenant = tenant
         return view(*args, **kwargs)
 

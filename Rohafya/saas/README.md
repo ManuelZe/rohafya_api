@@ -31,12 +31,19 @@ ROHAFYA sert désormais plusieurs établissements (*tenants*). Un patient ou un 
    ```
 7. **Fuseau horaire du serveur** : le quota d'imports PDF repart à minuit, heure du serveur. Réglez le conteneur sur l'heure locale (ex. `TZ=Africa/Douala`).
 8. **Lecture IA des PDF (facultatif)** : `pip install anthropic`, variable `ANTHROPIC_API_KEY`, puis autorisation établissement par établissement dans la console super-admin. À n'activer qu'après accord de l'établissement sur l'envoi de ses PDF à un service externe.
+9. **Tâche quotidienne de facturation** : planifier chaque jour (cron du serveur ou tâche Portainer), par exemple à 6 h :
+   ```bash
+   flask --app Rohafya saas billing
+   ```
+   Elle émet les factures arrivées à échéance et prévient les super-administrateurs des fins d'essai (J-7 et jour J). Le bouton « Émettre les factures dues » de la console fait la même chose à la demande.
+10. **Mentions des factures** (variables du conteneur de l'API) : `ROHAFYA_INVOICE_NAME` (raison sociale, « ROHAFYA » par défaut), `ROHAFYA_INVOICE_ADDRESS`, `ROHAFYA_INVOICE_RCCM`, `ROHAFYA_INVOICE_TAX_ID` (NIU), `ROHAFYA_INVOICE_CONTACT`, `ROHAFYA_INVOICE_PAYMENT` (numéros Mobile Money, coordonnées bancaires). À renseigner avant la première facture.
+11. **Double authentification des administrateurs** : obligatoire par défaut (`ROHAFYA_ADMIN_MFA_REQUIRED`, `true` si absente). À la première connexion après la mise à jour, chaque super-administrateur et administrateur d'établissement est conduit à la page « Sécurité » pour l'activer. `false` la rend facultative (déconseillé). Le secret est chiffré avec une clé dérivée de `SECRET_KEY` : changer `SECRET_KEY` oblige à réinitialiser toutes les doubles authentifications.
 
 ## Rôles
 
 | Rôle | Espace front | Droits |
 | --- | --- | --- |
-| `SuperAdmin` (ou `Admin` historique) | `/super-admin` | Tous les établissements, leurs administrateurs, leurs clés d'API, tous les comptes et leurs droits, les notifications aux établissements, les demandes d'essai du site, le journal global |
+| `SuperAdmin` (ou `Admin` historique) | `/super-admin` | Tous les établissements, leurs administrateurs, leurs clés d'API, leurs abonnements et factures, tous les comptes, leurs droits et leur double authentification, les notifications aux établissements, les demandes d'essai du site, les demandes de suppression de compte, le journal global |
 | `EstablishmentAdmin` + appartenance (`saas_tenant_members`) | `/admin` | Uniquement ses établissements : patients, rattachements, QR codes, médecins, notifications à ses patients et médecins, données reçues, réglages, journal |
 | `Patient` (permissions `patients.*`) | `/patients` | Les résultats de tous les établissements rattachés sont agrégés ; envoie prescriptions, pré-enregistrements et requêtes à l'établissement de son choix |
 | `Doctor` (permissions `doctors.*`) | `/doctors` | Résultats partagés ; envoie prescriptions (pour un patient), pré-enregistrements de patients et requêtes à l'établissement de son choix |
@@ -227,17 +234,55 @@ Le formulaire « Demander un essai » du site (`/intro`, `/en`) envoie la demand
 
 Les demandes sont dans `saas_trial_requests` (créée au démarrage, comme les autres tables `saas_*`).
 
+## Langue des e-mails et des notifications système
+
+Les e-mails et les notifications créés par la plateforme partent dans la langue du destinataire (`saas/i18n.py`) :
+
+1. la préférence de son compte (`saas_user_preferences`) ;
+2. sinon, pour une requête venue du front, la langue de l'interface (le front envoie `Accept-Language: fr | en` à chaque appel) ;
+3. sinon, le français.
+
+Les modèles anglais sont dans `templates/emails/en/` (même nom que le modèle français, mise en page commune `emails/_layout.html` et `emails/_macros.html`) ; les objets et les textes des notifications sont dans `TEXTS` de `saas/i18n.py`. `send_mail(to, "clé", "emails/x.html", locale=None, **contexte)` choisit seul la langue et la version du modèle ; `notify_user(user_id, "clé du titre", "clé du message", **paramètres)` traduit dans la langue du compte. Un texte qui n'est pas une clé est envoyé tel quel (notifications écrites par un administrateur). Les anciens e-mails (identifiants, création de compte médecin) suivent la même règle (`email/email.py`).
+
+## Abonnements et facturation des établissements
+
+Grille (`PLANS` dans `saas/constants.py`, identique au site et au document de vente) : Essentiel (500 résultats par mois, 25 000 FCFA, mise en service 75 000), Standard (2 000, 50 000, 150 000), Avancé (6 000, 100 000, 300 000), Réseau ou hôpital (volume et prix convenus, à partir de 200 000 et 500 000).
+
+- **Abonnement** (`saas_subscriptions`, un par établissement, créé avec l'établissement ou par `flask saas init`) : essai de 60 jours en formule Standard, puis « Abonné » ; rythme mensuel, trimestriel ou annuel (dix mois payés pour douze) ; conditions particulières (volume, prix, mise en service) ; mise en service offerte (programme fondateurs) ; mois offerts (parrainage). L'établissement GNU Health n'est pas facturé.
+- **Volume** (`saas_usage_events`) : chaque résultat publié (laboratoire, imagerie, exploration ; pas les factures) compte une fois dans le mois de sa première réception, quelle que soit la voie (API, FHIR, PDF). Un renvoi ou une correction ne recompte pas ; un résultat supprimé puis renvoyé dans le mois non plus. `flask saas init` compte les résultats déjà reçus.
+- **Alertes** (`saas_usage_alerts`) : à 80 % puis à 100 % du volume, une fois par mois, notification et e-mail (`emails/alerte_volume.html`) aux administrateurs de l'établissement, notification aux super-administrateurs. **La publication n'est jamais bloquée.**
+- **Recommandation** : quand les trois derniers mois complets sortent tous de la formule (au-dessus, ou sous une formule inférieure), la formule adaptée est proposée, applicable au trimestre suivant. Le changement est fait par le super-administrateur.
+- **Factures** (`saas_tenant_invoices`, numéro `ROH-AAAAMM-NNNN`) : payées d'avance, émises le jour où la période commence (`next_invoice_on`), avec la mise en service sur la première, les mois offerts déduits ; échéance à 15 jours ; statuts émise, payée (date et référence Mobile Money ou virement), annulée. Les lignes sont stockées par type (`subscription`, `free_month`, `setup`, `setup_waived`) et libellées par le front dans la langue du lecteur ; le PDF est produit dans le navigateur. Une facture émise reste après la suppression de l'établissement (pièce comptable).
+
+Routes : `GET /saas/admin/tenants/<id>/subscription` (formule, volume des 12 derniers mois, recommandation, factures) et `GET …/invoices/<id>` pour l'établissement ; `GET /saas/super/billing` (vue d'ensemble, revenu mensuel récurrent, impayés), `GET|PUT /saas/super/tenants/<id>/subscription`, `GET /saas/super/invoices?status=emise|payee|annulee|overdue&tenant_id=`, `GET|PUT /saas/super/invoices/<id>`, `POST /saas/super/invoices/issue` pour le super-administrateur. Le tableau de bord de l'établissement (`…/dashboard`) renvoie aussi `usage`.
+
+## Sécurité des comptes
+
+**Double authentification** (`saas/security.py`, table `saas_user_mfa`) : code TOTP à 6 chiffres d'une application d'authentification (RFC 6238, fenêtre de ±30 s, un code ne sert qu'une fois), secret chiffré en base, dix codes de secours à usage unique. Obligatoire pour les super-administrateurs et les administrateurs d'établissement, facultative pour les autres comptes.
+
+- Connexion : après le mot de passe (`POST /user/login`) ou le code e-mail (`POST /saas/auth/otp/verify`), un compte protégé reçoit `{"mfa_required": true, "mfa_token": "…"}` au lieu de la session ; `POST /saas/auth/mfa/verify` avec `{"mfa_token", "code"}` (code de l'application ou code de secours) ouvre la session. Jeton d'étape valable 5 minutes ; 5 codes faux en 15 minutes bloquent le compte 15 minutes (429).
+- Consoles : sans double authentification, `super_admin_required` et `tenant_admin_required` répondent 403 `{"code": "mfa_setup_required"}` ; une session ouverte sans le code (jeton sans la marque `mfa`) reçoit 401 `{"code": "mfa_required"}`.
+- Réglages du compte : `GET /saas/me/security`, `POST /saas/me/mfa/setup` (secret, URI `otpauth://` et QR code), `POST /saas/me/mfa/enable` (codes de secours et nouvelle session), `POST /saas/me/mfa/recovery-codes`, `POST /saas/me/mfa/disable` (refusé aux administrateurs). Un e-mail prévient à chaque activation ou désactivation (`emails/securite.html`).
+- Téléphone perdu : `PUT /saas/super/users/<id>/mfa-reset` (par un autre super-administrateur).
+
+## Données personnelles (loi n° 2024/017 du 23 décembre 2024)
+
+- **Historique des accès** : `GET /saas/me/access-log`. Pour le patient : consultations de son dossier par l'établissement (`patient.viewed`, désormais tracé), consultations de ses résultats partagés par un médecin (`result.viewed`, qui porte le dossier dans `details.local_ref`), QR codes et rattachements, tentatives de rattachement par un autre compte. Le médecin est nommé, le personnel de l'établissement ne l'est pas.
+- **Export** : `GET /saas/me/export` (JSON : compte, profil, établissements, liste des résultats et factures, partages, demandes, notifications, historique des accès). L'export est tracé.
+- **Suppression** : `POST /saas/me/deletion-request` (motif facultatif ; accusé de réception par e-mail `emails/suppression_compte.html` ; super-administrateurs prévenus), `GET` et `DELETE` (annulation). Traitement par le super-administrateur : `GET /saas/super/deletion-requests?status=`, `POST /saas/super/deletion-requests/<id>` avec `{"decision": "anonymize" | "refuse", "note"}`. L'anonymisation désactive le compte, efface nom, e-mail, téléphones et identifiants (compte, profil patient ou médecin), retire les rattachements, supprime partages, notifications, préférences, droits et double authentification. Les données reçues des établissements (dossiers, résultats, factures) restent chez eux. Table `saas_deletion_requests`.
+
 ## Suppression d'un établissement
 
-`DELETE /saas/super/tenants/<id>` avec `{"confirm_slug": "<identifiant>"}` (super-administrateur). Efface ses données reçues, imports PDF, demandes reçues (adressage et contenu), rattachements, QR codes et administrateurs ; les comptes ROHAFYA des patients et médecins sont conservés, le journal est gardé (marqué `etablissement_supprime`). Refusé pour l'établissement GNU Health, qui peut seulement être suspendu.
+`DELETE /saas/super/tenants/<id>` avec `{"confirm_slug": "<identifiant>"}` (super-administrateur). Efface ses données reçues, imports PDF, demandes reçues (adressage et contenu), rattachements, QR codes, abonnement, volume et administrateurs ; ses factures émises sont conservées ; les comptes ROHAFYA des patients et médecins sont conservés, le journal est gardé (marqué `etablissement_supprime`). Refusé pour l'établissement GNU Health, qui peut seulement être suspendu.
 
 ## Ce que voient les utilisateurs
 
 - **Patient** : ses résultats et factures, tous établissements confondus, chacun portant le nom de son établissement. Les règles de chaque établissement s'appliquent : durée d'accès aux détails, blocage si une facture est impayée. L'écran « Mes établissements » permet d'ajouter ou de retirer un établissement.
 - **Médecin** : les résultats partagés par ses patients, quel que soit l'établissement. Le module commissions n'apparaît que si un établissement GNU Health l'active.
 - **Patient et médecin** : chaque prescription, pré-enregistrement ou requête affiche son établissement, son statut et la réponse reçue (montant du devis en FCFA).
-- **Administrateur d'établissement** : page « Demandes » (`/admin/demandes`), pour répondre ; page « Notifications » (`/admin/notifications`) : reçues, envoi aux patients et médecins, historique.
-- **Super-administrateur** : page « Demandes d'essai » (`/super-admin/demandes-essai`), pour suivre les établissements qui ont demandé une démonstration.
+- **Administrateur d'établissement** : page « Demandes » (`/admin/demandes`), pour répondre ; page « Notifications » (`/admin/notifications`) : reçues, envoi aux patients et médecins, historique ; page « Abonnement » (`/admin/abonnement`) : formule, volume du mois et des 12 derniers mois, factures en PDF ; page « Sécurité » (`/admin/securite`).
+- **Super-administrateur** : page « Demandes d'essai » (`/super-admin/demandes-essai`), pour suivre les établissements qui ont demandé une démonstration ; page « Facturation » (`/super-admin/facturation`) et section « Abonnement » de chaque établissement ; page « Données personnelles » (`/super-admin/donnees-personnelles`) ; page « Sécurité ».
+- **Patient et médecin** : page « Confidentialité » : historique des accès (patient), export, double authentification facultative, demande de suppression.
 - **Tous** : les notifications reçues des consoles, dans l'espace de chacun et par e-mail ; l'interface en français ou en anglais, au choix de chaque compte.
 
 ## Tests
@@ -249,10 +294,12 @@ Rohafya/envDoc/bin/python Rohafya/tests/test_notifications.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_droits.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_telephones.py
 Rohafya/envDoc/bin/python Rohafya/tests/test_essais.py
+Rohafya/envDoc/bin/python Rohafya/tests/test_abonnements.py
+Rohafya/envDoc/bin/python Rohafya/tests/test_securite.py
 ```
 
-`test_notifications.py` couvre les envois des deux consoles (destinataires, sélection, cloisonnement, e-mails, historique), les notifications de l'utilisateur connecté et le refus des anciennes routes sur les notifications d'un autre compte. `test_droits.py` couvre les droits d'impression et de partage, et les messages de connexion (e-mail inconnu). `test_telephones.py` couvre l'unicité des numéros. `test_essais.py` couvre la langue des comptes et les demandes d'essai (validation, champ piège, limites, notification des super-administrateurs, suivi).
+`test_notifications.py` couvre les envois des deux consoles (destinataires, sélection, cloisonnement, e-mails, historique), les notifications de l'utilisateur connecté et le refus des anciennes routes sur les notifications d'un autre compte. `test_droits.py` couvre les droits d'impression et de partage, et les messages de connexion (e-mail inconnu). `test_telephones.py` couvre l'unicité des numéros. `test_essais.py` couvre la langue des comptes et les demandes d'essai (validation, champ piège, limites, notification des super-administrateurs, suivi). `test_abonnements.py` couvre l'abonnement d'essai, le volume du mois, les alertes, la recommandation de formule, l'émission et le paiement des factures, et les e-mails et notifications dans la langue du compte. `test_securite.py` couvre la double authentification (obligation, activation, connexion en deux étapes, codes de secours, blocage, réinitialisation), l'historique des accès, l'export et la suppression d'un compte.
 
 `test_demandes.py` couvre les envois des patients, des médecins et des visiteurs, le cloisonnement entre établissements, les réponses et notifications, la reprise des envois antérieurs par `flask saas init` et la suppression d'un établissement.
 
-Ce test de bout en bout tourne sur SQLite en mémoire et couvre : connexion par code, création d'établissement, envoi API et FHIR, QR code, rattachement, cloisonnement entre établissements et droits, imports PDF et quota (si `pdfplumber` est installé), suppression d'un établissement.
+`test_saas.py`, test de bout en bout sur SQLite en mémoire, couvre : connexion par code, création d'établissement, envoi API et FHIR, QR code, rattachement, cloisonnement entre établissements et droits, imports PDF et quota, suppression d'un établissement. Il demande `pdfplumber` (`requirements.txt`) : sans lui, la partie PDF est sautée et le contrôle de la suppression échoue.

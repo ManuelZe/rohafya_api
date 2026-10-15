@@ -657,3 +657,55 @@ class TenantInvoice(db.Model):
             "payment_reference": self.payment_reference,
             "note": self.note,
         }
+
+
+# =====================================================================
+# Sécurité et données personnelles
+# =====================================================================
+
+class UserMfa(db.Model):
+    """Double authentification (application d'authentification, code TOTP à 6 chiffres) d'un compte."""
+
+    __tablename__ = "saas_user_mfa"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    # Secret chiffré (Fernet, clé dérivée de SECRET_KEY).
+    secret = db.Column(db.Text, nullable=False)
+    # Nul tant que le premier code n'a pas été confirmé (activation en cours).
+    enabled_at = db.Column(db.DateTime, nullable=True)
+    # Empreintes des codes de secours restants (usage unique).
+    recovery_hashes = db.Column(JSON, nullable=False, default=list)
+    # Dernier pas de 30 s accepté : un même code ne sert qu'une fois.
+    last_step = db.Column(db.BigInteger, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now)
+
+
+class DeletionRequest(db.Model):
+    """Demande de suppression d'un compte, traitée par un super-administrateur (loi n° 2024/017)."""
+
+    __tablename__ = "saas_deletion_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    email = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(200), nullable=True)
+    reason = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), nullable=False, default="demandee", index=True)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=_now)
+    processed_at = db.Column(db.DateTime, nullable=True)
+    processed_by = db.Column(db.Integer, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "email": self.email,
+            "name": self.name,
+            "reason": self.reason,
+            "status": self.status,
+            "note": self.note,
+            "created_at": self.created_at,
+            "processed_at": self.processed_at,
+        }

@@ -53,9 +53,16 @@ class CustomUserManager(UserManager):
         return {"message": "Identifiant ou mot de passe incorrect. Vérifiez vos paramètres de connexion et réessayez."}, 401
 
 
-    def _do_login_user(self, user, remember_me=False):
+    def _do_login_user(self, user, remember_me=False, mfa_verified=False):
         # User must have been authenticated
         if not user: return self.unauthenticated()
+
+        # Double authentification : la session n'est ouverte qu'après le code (POST /saas/auth/mfa/verify).
+        if not mfa_verified:
+            from Rohafya.saas.security import login_challenge
+            challenge = login_challenge(user, remember_me)
+            if challenge:
+                return jsonify(challenge)
 
         login_user(user, remember=remember_me, duration=timedelta(days=7))
         # Send user_logged_in signal
@@ -74,7 +81,7 @@ class CustomUserManager(UserManager):
             db.session.commit()
 
         data = user.to_dict()
-        access_token = create_access_token(identity=str(user.id), additional_claims={"roles": [r.name for r in user.roles], "login_time": datetime.now().isoformat()})
+        access_token = create_access_token(identity=str(user.id), additional_claims={"roles": [r.name for r in user.roles], "login_time": datetime.now().isoformat(), "mfa": bool(mfa_verified)})
         refresh_token = create_refresh_token(identity=str(user.id))
         response = jsonify({"data" : data, "access_token": access_token})
 
