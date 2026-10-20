@@ -514,7 +514,9 @@ class TrialRequest(db.Model):
     city = db.Column(db.String(120), nullable=False)
     phone = db.Column(db.String(40), nullable=False)
     email = db.Column(db.String(200), nullable=False)
-    # laboratoire, imagerie, centre_medical, clinique, hopital, reseau, autre
+    # rohafya (portail résultats) ou rohafya_health (progiciel hospitalier) : voir saas/trials.py PRODUCTS.
+    product = db.Column(db.String(30), nullable=False, default="rohafya", server_default="rohafya")
+    # Valeurs possibles selon product : voir saas/trials.py KINDS / HEALTH_KINDS.
     kind = db.Column(db.String(30), nullable=False)
     # moins_200, 200_500, 500_2000, plus_2000
     monthly_volume = db.Column(db.String(20), nullable=True)
@@ -537,6 +539,7 @@ class TrialRequest(db.Model):
             "city": self.city,
             "phone": self.phone,
             "email": self.email,
+            "product": self.product,
             "kind": self.kind,
             "monthly_volume": self.monthly_volume,
             "software": self.software,

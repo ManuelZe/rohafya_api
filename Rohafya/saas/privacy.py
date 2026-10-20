@@ -13,6 +13,8 @@ from sqlalchemy import or_, select
 
 from Rohafya import db
 from Rohafya.accounts.models import Doctors, Notifications, Patients, Send_Results, User
+# Bilan prénuptial : importé ici pour que ses tables existent partout où les données d'un compte sont traitées.
+from Rohafya.premarital.services import export_for_patient, purge_patient, revoke_for_doctor
 from . import i18n
 from .constants import LINK_REVOKED
 from .models import (
@@ -157,6 +159,7 @@ def export_data(user):
                 })
         shares = db.session.execute(select(Send_Results).filter_by(patient_id=patient.id)).scalars().all()
         data["shared_results"] = [_row(share) for share in shares]
+        data["premarital_checkup"] = export_for_patient(patient)
     for submission in db.session.execute(select(Submission).filter_by(author_id=user.id)).scalars():
         data["requests"].append({
             "kind": submission.kind, "status": submission.status, "establishment": submission.tenant.display_name if submission.tenant else None,
@@ -217,6 +220,8 @@ def anonymize_account(user, actor_id):
     if patient is not None:
         for share in db.session.execute(select(Send_Results).filter_by(patient_id=patient.id)).scalars():
             db.session.delete(share)
+        # Le bilan prénuptial n'est conservé que par ROHAFYA : il est effacé avec le compte.
+        purge_patient(patient)
         for link in db.session.execute(select(PatientLink).filter_by(patient_id=patient.id)).scalars():
             link.status = LINK_REVOKED
             link.updated_at = now()
@@ -229,6 +234,7 @@ def anonymize_account(user, actor_id):
             db.session.delete(share)
         for link in db.session.execute(select(PractitionerLink).filter_by(doctor_id=doctor.id)).scalars():
             db.session.delete(link)
+        revoke_for_doctor(doctor)
         doctor.DoctorName, doctor.DoctorLastname = "Compte", "supprimé"
         doctor.DoctorDOB, doctor.DoctorPOB, doctor.DoctorNat, doctor.DoctorCNI = None, "", "", ""
         doctor.DoctorPhone, doctor.DoctorPhone2, doctor.DoctorSignature = None, None, None

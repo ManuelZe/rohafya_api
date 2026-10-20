@@ -133,6 +133,22 @@ TEXTS = {
         "fr": "Le Patient {patient} vient de Supprimer le partage de résultat. Le résultat d'examen de type '{exam_type}' avec le code '{exam_code}' a été supprimé.",
         "en": "Patient {patient} stopped sharing the {exam_type} result with code {exam_code}.",
     },
+    # --- Bilan prénuptial
+    "premarital.authorized.title": {"fr": "Bilan prénuptial : nouvel accès", "en": "Premarital check-up: new access"},
+    "premarital.authorized.message": {
+        "fr": "{patient} vous autorise à consulter et à remplir son bilan prénuptial.",
+        "en": "{patient} has authorised you to view and fill in their premarital check-up.",
+    },
+    "premarital.revoked.title": {"fr": "Bilan prénuptial : accès retiré", "en": "Premarital check-up: access removed"},
+    "premarital.revoked.message": {
+        "fr": "{patient} a retiré votre accès à son bilan prénuptial.",
+        "en": "{patient} has removed your access to their premarital check-up.",
+    },
+    "premarital.updated.title": {"fr": "Bilan prénuptial mis à jour", "en": "Premarital check-up updated"},
+    "premarital.updated.message": {
+        "fr": "Le Dr {doctor} a mis à jour votre bilan prénuptial.",
+        "en": "Dr {doctor} has updated your premarital check-up.",
+    },
     # --- Demandes d'essai (super-administrateurs)
     "trial.title": {"fr": "Demande d'essai · {establishment}", "en": "Trial request · {establishment}"},
     "trial.message": {

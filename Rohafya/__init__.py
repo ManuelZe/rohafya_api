@@ -131,6 +131,8 @@ def create_app():
 
     # Tables du mode SaaS (nouvelles tables uniquement : créées ci-dessous par create_all).
     from .saas import models as saas_models  # noqa: F401
+    # Tables du bilan prénuptial (nouvelles tables, créées elles aussi par create_all).
+    from .premarital import models as premarital_models  # noqa: F401
 
     # Les anciens noms EDEN_* sont encore lus pour ne pas casser les conteneurs existants.
     app.config['ROHAFYA_FRONT_URL'] = os.environ.get('ROHAFYA_FRONT_URL') or os.environ.get('EDEN_FRONT_URL') or "https://rohafya.com"
@@ -147,6 +149,12 @@ def create_app():
         # Notifications : message en texte long (VARCHAR(255) sur les bases existantes).
         from .saas.notifications import widen_message_column
         widen_message_column()
+        # Demandes d'essai : colonne product (ROHAFYA / ROHAFYA HEALTH) sur les bases existantes.
+        from .saas.trials import ensure_product_column
+        ensure_product_column()
+        # Bilan prénuptial : catalogue initial des examens (une seule fois, table vide).
+        from .premarital.services import ensure_catalogue
+        ensure_catalogue()
 
     # Enregistrement des blueprints
     from .accounts.users import userd
@@ -179,6 +187,7 @@ def create_app():
     from .saas.cli import saas_cli
     from .saas.pdf_routes import pdf_imports
     from .saas.submission_routes import submissions_admin
+    from .premarital.routes import premarital
 
     app.register_blueprint(requete)
     app.register_blueprint(doctor_gnu)
@@ -210,6 +219,7 @@ def create_app():
     app.register_blueprint(saas_fhir)
     app.register_blueprint(pdf_imports)
     app.register_blueprint(submissions_admin)
+    app.register_blueprint(premarital)
     app.cli.add_command(saas_cli)
 
     from .accounts.models import UserActivity

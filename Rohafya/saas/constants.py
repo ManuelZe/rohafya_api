@@ -27,8 +27,12 @@ SOURCES = (SOURCE_GNUHEALTH, SOURCE_API, SOURCE_FHIR, SOURCE_PDF)
 DEFAULT_FRONT_ORIGINS = (
     "https://rohafya.com",
     "https://preprod.rohafya.com",
+    "https://health.rohafya.com",
+    "https://preprod.health.rohafya.com",
     "http://localhost:4000",
     "http://localhost:4200",
+    "http://localhost:4100",
+    "http://localhost:4300",
 )
 
 

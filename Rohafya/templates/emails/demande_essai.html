@@ -10,7 +10,7 @@
         <tr>
             <td align="center">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px; background:#ffffff; border-radius:12px; padding:32px 28px;">
-                    <tr><td style="font-size:22px; font-weight:700; color:#047857; padding-bottom:16px;">ROHAFYA</td></tr>
+                    <tr><td style="font-size:22px; font-weight:700; color:#047857; padding-bottom:16px;">{{ product_label }}</td></tr>
                     <tr><td style="font-size:18px; font-weight:700; color:#0c4562; padding-bottom:12px;">Nouvelle demande d'essai : {{ request.establishment }}</td></tr>
                     <tr>
                         <td style="font-size:15px; line-height:1.6;">
@@ -18,7 +18,7 @@
                             {{ kind_label }} · {{ request.city }}<br>
                             WhatsApp / téléphone : {{ request.phone }}<br>
                             E-mail : {{ request.email }}<br>
-                            Résultats par mois : {{ volume_label }}<br>
+                            {% if request.product != 'rohafya_health' %}Résultats par mois : {{ volume_label }}<br>{% endif %}
                             {% if request.software %}Logiciel : {{ request.software }}<br>{% endif %}
                             {% if request.preferred_slot %}Créneau souhaité : {{ request.preferred_slot }}<br>{% endif %}
                             Langue : {{ 'anglais' if request.locale == 'en' else 'français' }}

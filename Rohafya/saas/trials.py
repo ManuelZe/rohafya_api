@@ -6,7 +6,7 @@ est enregistrée, signalée aux super-administrateurs (notification et e-mail) e
 import datetime
 import re
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from Rohafya import db
 from Rohafya.accounts.models import Notifications, Role, User, UserRoles
@@ -14,6 +14,10 @@ from . import i18n, services
 from .constants import SUPER_ADMIN_ROLES
 from .models import TrialRequest
 from .services import SaasError, front_url, now
+
+# rohafya : portail de résultats médicaux. rohafya_health : progiciel de gestion hospitalière.
+PRODUCTS = ("rohafya", "rohafya_health")
+PRODUCT_LABELS = {"rohafya": "ROHAFYA", "rohafya_health": "ROHAFYA HEALTH"}
 
 KINDS = ("laboratoire", "imagerie", "centre_medical", "clinique", "hopital", "reseau", "autre")
 KIND_LABELS = {
@@ -34,13 +38,38 @@ KIND_LABELS_EN = {
     "reseau": "Multi-site network",
     "autre": "Other",
 }
+
+# Types d'établissements qualifiés par le site de présentation de ROHAFYA HEALTH.
+HEALTH_KINDS = ("clinique_privee", "hopital_prive", "hopital_public", "ministere_programme", "reseau", "autre")
+HEALTH_KIND_LABELS = {
+    "clinique_privee": "Clinique privée",
+    "hopital_prive": "Hôpital privé",
+    "hopital_public": "Hôpital public",
+    "ministere_programme": "Ministère ou programme de santé",
+    "reseau": "Réseau multi-établissements",
+    "autre": "Autre",
+}
+HEALTH_KIND_LABELS_EN = {
+    "clinique_privee": "Private clinic",
+    "hopital_prive": "Private hospital",
+    "hopital_public": "Public hospital",
+    "ministere_programme": "Ministry or health programme",
+    "reseau": "Multi-site network",
+    "autre": "Other",
+}
+
 VOLUMES = ("moins_200", "200_500", "500_2000", "plus_2000")
 VOLUME_LABELS = {"moins_200": "Moins de 200", "200_500": "200 à 500", "500_2000": "500 à 2 000", "plus_2000": "Plus de 2 000"}
 VOLUME_LABELS_EN = {"moins_200": "Under 200", "200_500": "200 to 500", "500_2000": "500 to 2,000", "plus_2000": "Over 2,000"}
 
 
+def _kinds_for(product):
+    return HEALTH_KINDS if product == "rohafya_health" else KINDS
+
+
 def _kind_label(kind, locale):
-    return (KIND_LABELS_EN if locale == "en" else KIND_LABELS).get(kind, kind)
+    labels = {**KIND_LABELS, **HEALTH_KIND_LABELS} if locale != "en" else {**KIND_LABELS_EN, **HEALTH_KIND_LABELS_EN}
+    return labels.get(kind, kind)
 
 
 def _volume_label(volume, locale):
@@ -74,12 +103,15 @@ def create_trial_request(data):
     # Champ invisible (« website ») : rempli seulement par les robots. Réponse identique, rien n'est enregistré.
     if str(data.get("website") or "").strip():
         return None
+    product = str(data.get("product") or "rohafya").strip()
+    if product not in PRODUCTS:
+        raise SaasError("Produit inconnu.", 400)
     values = {key: _text(data, key) for key in LIMITS}
     values["kind"] = str(data.get("kind") or "").strip()
     missing = [label for key, label in REQUIRED.items() if not values.get(key)]
     if missing:
         raise SaasError("Indiquez " + ", ".join(missing) + ".", 400)
-    if values["kind"] not in KINDS:
+    if values["kind"] not in _kinds_for(product):
         raise SaasError("Type d'établissement inconnu.", 400)
     if not EMAIL.match(values["email"]):
         raise SaasError("Adresse e-mail invalide.", 400)
@@ -108,6 +140,7 @@ def create_trial_request(data):
         city=values["city"],
         phone=values["phone"],
         email=email,
+        product=product,
         kind=values["kind"],
         monthly_volume=volume,
         software=values["software"],
@@ -153,8 +186,29 @@ def _notify_super_admins(request):
                 request=request,
                 kind_label=_kind_label(request.kind, locale),
                 volume_label=_volume_label(request.monthly_volume, locale),
+                product_label=PRODUCT_LABELS.get(request.product, request.product),
                 open_url=link,
             )
+
+
+def ensure_product_column():
+    """saas_trial_requests.product : ajoutée pour distinguer ROHAFYA et ROHAFYA HEALTH sur une base existante.
+
+    PostgreSQL seulement (une base neuve a déjà la colonne via create_all). Idempotent.
+    """
+    if db.engine.dialect.name != "postgresql":
+        return False
+    with db.engine.begin() as connection:
+        exists = connection.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = current_schema() AND table_name = 'saas_trial_requests' AND column_name = 'product'"
+        )).scalar()
+        if exists:
+            return False
+        connection.execute(text(
+            "ALTER TABLE saas_trial_requests ADD COLUMN product VARCHAR(30) NOT NULL DEFAULT 'rohafya'"
+        ))
+        return True
 
 
 def trial_requests_page(status=None, page=1, size=25):
